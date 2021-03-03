@@ -1,4 +1,8 @@
 # Script - Photos Organizer
 Script - Photos Organizer
 
-Credits: Pedro and Márcia <3
+. Works for linux
+. Delete duplicated photos
+. Let you choose what duplicated photos you want to delete
+
+Credits: Pedro and Márcia
