@@ -14,3 +14,5 @@ Script - Photos Organizer
 <br>. Let you choose what duplicated photos you want to delete
 
 <br>Credits: Pedro and Márcia
+
+<li><a href="https://paypal.me/pedrorxpgrilo" rel="nofollow"><img src="https://camo.githubusercontent.com/a18b4bf3a695fb7a3c6eff91238fe45862849a8b38ffe492764d33fc73036de2/68747470733a2f2f696f6e69636162697a61752e6769746875622e696f2f6261646765732f70617970616c2e737667" alt="paypal.me/pedrorxogrilo" data-canonical-src="https://ionicabizau.github.io/badges/paypal.svg" style="max-width:100%;"></a> - You can make one-time donations via PayPal. I'll probably buy a <del>coffee</del> tea. <g-emoji class="g-emoji" alias="tea" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f375.png">🍵</g-emoji></li>
