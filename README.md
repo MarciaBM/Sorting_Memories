@@ -13,13 +13,13 @@ Pre-Requisites
 . You will need to be running a Linux operating system.
 
 . You will need to have **Java SDK** installed.
-For Ubuntu and Ubuntu distros users:
+For Ubuntu distros users:
 ```
 sudo apt install openjdk-11-jdk
 ```
 
 . You will need to have `openimageio-tools` library installed.
-For Ubuntu and Ubuntu distros users:
+For Ubuntu distros users:
 ```
 sudo apt install openimageio-tools
 ```
