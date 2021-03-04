@@ -26,7 +26,7 @@ sudo apt install openimageio-tools
 
 Installation
 ------------------
-.Start for cloning our repository, you will need to have Git installed.
+<li>Start for cloning our repository, you will need to have Git installed.</li>
 ```
 git clone https://github.com/MarciaBM/script-photos/
 ```
