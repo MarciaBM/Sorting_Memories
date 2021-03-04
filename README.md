@@ -2,23 +2,23 @@
 
 [![Downloads](https://img.shields.io/github/downloads/MarciaBM/script-photos/total.svg?maxAge=2592000?style=flat-square)](https://github.com/MarciaBM/script-photos/releases)
 
-This is a program to help you organize your messy folder of pictures and videos developed initially for the Linux operating system.
-It will automatically delete empty sub-folders and will recursevily detect if you have duplicated photos. Then you will be able to choose wich ones you want to keep and wich ones you don't. Also you will be able to choose the percentage of equality of the photos you want the program to detect. About the videos, for now it will only detect you have duplicated videos with 100% match.
+This is a program made with **Java** to help you organize your messy folder of pictures and videos. Initially developed for the **Linux** operating system.
+It will automatically delete empty sub-folders and will recursevily detect if you have duplicated photos. Then you will be able to choose wich ones you want to keep and wich ones you don't. Also you will be able to choose the percentage of equality of the photos you want the program to detect. About the videos, for now it will only detect duplicated videos with 100% match of equality.
 
-Later, we intend that the software will organize your photos by year, throught the date the photo was taken.
+Later, we intend that the software will be able to organize your photos by year, using the date the photo was taken, if available.
 
 Pre-Requisites
 ------------------
 
-.You will need to be running a Linux operating system.
+. You will need to be running a Linux operating system.
 
-.You will need to have Java SDK installed.
+. You will need to have **Java SDK** installed.
 For Ubuntu and Ubuntu distros users:
 ```
 sudo apt install openjdk-11-jdk
 ```
 
-.You will need to have `openimageio-tools` library installed.
+. You will need to have `openimageio-tools` library installed.
 For Ubuntu and Ubuntu distros users:
 ```
 sudo apt install openimageio-tools
@@ -26,17 +26,18 @@ sudo apt install openimageio-tools
 
 Installation
 ------------------
-<li>Start for cloning our repository, you will need to have Git installed.</li>
+. Start for cloning our repository, you will need to have **Git** installed (usually it comes already installed on Linux).
 ```
 git clone https://github.com/MarciaBM/script-photos/
 ```
+Or you can just click on the clone button and download the .zip file.
 
-.Open your terminal inside the downloaded folder at script-photos/src and run:
+. Open your terminal inside the downloaded folder at **script-photos/src** and run:
 ```
 javac Main.java
 ```
 ```
-java Main.java
+java Main [path of the folder you want to run the script]
 ```
 
 And that's it, your running our script, hope you like it and enjoy it!
