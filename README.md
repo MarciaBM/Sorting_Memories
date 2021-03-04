@@ -30,7 +30,7 @@ Installation
 ```
 git clone https://github.com/MarciaBM/script-photos/
 ```
-Or you can just click on the clone button and download the .zip file.
+Or you can just click on the Code green button and download the .zip file.
 
 . Open your terminal inside the downloaded folder at **script-photos/src** and run:
 ```
