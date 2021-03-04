@@ -13,31 +13,37 @@ public class Main {
     }
 
     private static boolean isDuplicatedProcess(File current, File secondFile, int userPercentage) throws IOException{
-        String command = (getMimeType(current).equals("image") &&
-                getMimeType(secondFile).equals("image")) ? "idiff" : "diff";
 
         ProcessBuilder processBuilder = new ProcessBuilder();
+        String command, line;
+        boolean mimeTypeCurrent = getMimeType(current).equals("image"),
+                mimeTypeSecond = getMimeType(secondFile).equals("image");
 
-        if(command.equals("idiff"))
+        if(mimeTypeCurrent && mimeTypeSecond) {
+            command = "idiff";
             processBuilder.command(command,"-p",current.getAbsolutePath(), secondFile.getAbsolutePath());
-        else
+        } else if(mimeTypeCurrent != mimeTypeSecond) {
+            return false;
+        } else {
+            command = "diff";
             processBuilder.command(command,current.getAbsolutePath(), secondFile.getAbsolutePath());
+        }
 
         Process process = processBuilder.start();
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
         List<String> result = new ArrayList<>();
-        String line;
 
         while ((line = reader.readLine()) != null)
             result.add(line);
 
-        if(!(result.get(result.size()-1).equals("PASS"))){ //failure
+        if(command.equals("diff")) {
+            return result.size() == 0;
+        } else if(!(result.get(result.size()-1).equals("PASS"))){ //failure
             String firstSplitParentheses =  result.get(result.size()-2).split("\\(")[1];
             String finalSplit = firstSplitParentheses.split("\\)")[0];
             double percentage =  100 - Double.parseDouble(finalSplit.substring(0,finalSplit.length()-1));
             return percentage >= userPercentage;
         }
-
         return true;
     }
 
