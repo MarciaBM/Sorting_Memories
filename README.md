@@ -1,6 +1,8 @@
 # Script - Photos Organizer
 Script - Photos Organizer
 
+[![Downloads](https://img.shields.io/github/downloads/MarciaBM/script-photos/total.svg?maxAge=2592000?style=flat-square)](https://github.com/MarciaBM/script-photos/releases)
+
 <form action="https://www.paypal.com/donate" method="post" target="_top">
 <input type="hidden" name="business" value="creepertuga@gmail.com" />
 <input type="hidden" name="item_name" value="Github repository" />
@@ -12,6 +14,8 @@ Script - Photos Organizer
 <br>. Works for linux
 <br>. Delete duplicated photos
 <br>. Let you choose what duplicated photos you want to delete
+
+sudo apt install openimageio-tools
 
 <br>Credits: Pedro and Márcia
 
