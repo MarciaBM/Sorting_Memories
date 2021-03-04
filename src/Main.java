@@ -45,12 +45,11 @@ public class Main {
         Map<File, FileProperties> files = new HashMap<>();
         for(File f:folder.listFiles()) {
             Iterator<File> it = getFile(f, new ArrayList<>());
-            while(it.hasNext())
-                files.put(it.next(), new FileProperties(false,false));
+            while (it.hasNext()) files.put(it.next(), new FileProperties(false, false));
         }
-
         File current;
         List<File> list = new ArrayList<>(files.keySet());
+        int percentage = getPercentage(in);
 
         for(int i = 0;i<files.size()-1;i++) {
             File file = list.get(i);
@@ -62,63 +61,100 @@ public class Main {
                 for (int j = i + 1; j < files.size(); j++) {
                     File secondFile = list.get(j);
                     if(!files.get(secondFile).getSeen() && !files.get(secondFile).getToDelete()) {
-                        if (isDuplicatedProcess(current.getAbsolutePath(), secondFile.getAbsolutePath())) {
+                        if (isDuplicatedProcess(current, secondFile,percentage)) {
                             toDelete.add(secondFile);
                             files.get(secondFile).setSeen(true);
                         }
                     }
                 }
+                chooseToDelete(in,toDelete,files);
+            }
+        }
+        deleteFiles(files);
+    }
 
+    private static int getPercentage(Scanner in){
+        System.out.println("Enter the equality percentage to compare the photos:");
 
-                if (toDelete.size() > 1) {
-                    System.out.println("Duplicated files have been found, please choose the ones you want to delete (separate them with space):");
-                    for (int m = 0; m < toDelete.size(); m++) {
-                        int aux = m + 1;
-                        System.out.println(aux + ": " + toDelete.get(m).getAbsolutePath());
-                    }
-                    System.out.println("E: Keep them all");
-                    String answer = in.nextLine();
+        while(true) {
+            String answer = in.nextLine().trim();
+            if(answer.matches("[0-9]+")){
+                int percentage = Integer.parseInt(answer);
+                if(percentage >=0 && percentage <=100)
+                    return percentage;
+            }
+        }
+    }
+
+    private static void chooseToDelete(Scanner in,List<File> toDelete, Map<File, FileProperties> files){
+        if (toDelete.size() > 1) {
+            System.out.println("Duplicated files have been found, please choose the ones you want to delete (separate them with space):");
+            for (int m = 0; m < toDelete.size(); m++) {
+                int aux = m + 1;
+                System.out.println(aux + ": " + toDelete.get(m).getAbsolutePath());
+            }
+            System.out.println("E: Keep them all");
+            //user
+            boolean accepted=false;
+            while(!accepted){
+                String answer = in.nextLine().trim();
+                if (answer.matches("[0-9 ]+|E")) {
+                    accepted = true;
                     if (!answer.equals("E")) {
                         String[] numbers = answer.split(" ");
                         for (String s : numbers) {
                             int index = Integer.parseInt(s) - 1;
+                            if(index>=files.size() || index <0){
+                                accepted=false;
+                                break;
+                            }
                             files.get(toDelete.get(index)).setToDelete(true);
                         }
                     }
                 }
             }
         }
+    }
 
+    private static void deleteFiles(Map<File, FileProperties> files){
+        boolean found = false;
         for (File key : files.keySet()) {
-            if (files.get(key).getToDelete())
+            if (files.get(key).getToDelete()) {
                 key.delete();
+                found=true;
+            }
         }
+        if(!found)
+            System.out.println("There aren't any possible files to delete");
     }
 
     public static void main(String[] args) {
 
-        Scanner in = new Scanner(System.in);
-        String directory = args[0];
-        File folder = new File(directory);
+        try {
+            Scanner in = new Scanner(System.in);
+            if(args.length == 0)
+                throw new Exception("Please insert a directory");
+            if(args.length > 1)
+                throw new Exception("Upss too many arguments!");
 
-        if(folder.isDirectory()) {
+            String directory = args[0];
+            File folder = new File(directory);
+
+            if(!folder.isDirectory())
+                throw new Exception("Please insert a folder's directory");
 
             //delete empty folders
             System.out.println(deleteEmptyFolders(folder,0) + " empty folders were deleted.");
 
-            try {
-                //real shit
-                folder = new File(directory);
-                deleteDuplicatedFiles(in, folder);
-                System.out.println(deleteEmptyFolders(folder, 0) + " empty folders were deleted.");
+            //delete duplicated files
+            folder = new File(directory);
+            deleteDuplicatedFiles(in, folder);
 
+            System.out.println(deleteEmptyFolders(folder, 0) + " empty folders were deleted.");
 
-            } catch (Exception e) {
-                System.out.println(e);
-
-            }
-        }else
-            System.out.println("Please insert a folder's directory");
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
     }
 }
 
