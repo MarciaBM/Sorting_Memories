@@ -1,6 +1,6 @@
 # Script - Photos Organizer
 
-[![Downloads](https://img.shields.io/github/downloads/MarciaBM/script-photos/total.svg?maxAge=2592000?style=flat-square)]
+[![Downloads](https://img.shields.io/github/downloads/MarciaBM/script-photos/total.svg)]()
 
 This is a program made with **Java** to help you organize your messy folder of pictures and videos. Initially developed for the **Linux** operating system.
 It will automatically delete empty sub-folders and will recursevily detect if you have duplicated photos. Then you will be able to choose wich ones you want to keep and wich ones you don't. Also you will be able to choose the percentage of equality of the photos you want the program to detect. About the videos, for now it will only detect duplicated videos with 100% match of equality.
