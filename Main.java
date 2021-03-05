@@ -1,9 +1,13 @@
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.List;
 
 public class Main {
 
@@ -12,39 +16,85 @@ public class Main {
         return (mimetype.split("/")[0]);
     }
 
-    private static boolean isDuplicatedProcess(File current, File secondFile, int userPercentage) throws IOException{
+//    private static boolean isDuplicatedProcess(File current, File secondFile, int userPercentage) throws IOException{
+//
+//        ProcessBuilder processBuilder = new ProcessBuilder();
+//        String command, line;
+//        boolean mimeTypeCurrent = getMimeType(current).equals("image"),
+//                mimeTypeSecond = getMimeType(secondFile).equals("image");
+//
+//        if(mimeTypeCurrent && mimeTypeSecond) {
+//            command = "idiff";
+//            processBuilder.command(command,"-p",current.getAbsolutePath(), secondFile.getAbsolutePath());
+//        } else if(mimeTypeCurrent != mimeTypeSecond) {
+//            return false;
+//        } else {
+//            command = "diff";
+//            processBuilder.command(command,current.getAbsolutePath(), secondFile.getAbsolutePath());
+//        }
+//
+//        Process process = processBuilder.start();
+//        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+//        List<String> result = new ArrayList<>();
+//
+//        while ((line = reader.readLine()) != null)
+//            result.add(line);
+//
+//        if(command.equals("diff")) {
+//            return result.size() == 0;
+//        } else if(!(result.get(result.size()-1).equals("PASS"))){ //failure
+//            String firstSplitParentheses =  result.get(result.size()-2).split("\\(")[1];
+//            String finalSplit = firstSplitParentheses.split("\\)")[0];
+//            double percentage =  100 - Double.parseDouble(finalSplit.substring(0,finalSplit.length()-1));
+//            return percentage >= userPercentage;
+//        }
+//        return true;
+//    }
 
-        ProcessBuilder processBuilder = new ProcessBuilder();
-        String command, line;
+    private static boolean isDuplicatedProcess(File current, File secondFile, int userPercentage) throws IOException {
         boolean mimeTypeCurrent = getMimeType(current).equals("image"),
                 mimeTypeSecond = getMimeType(secondFile).equals("image");
 
         if(mimeTypeCurrent && mimeTypeSecond) {
-            command = "idiff";
-            processBuilder.command(command,"-p",current.getAbsolutePath(), secondFile.getAbsolutePath());
-        } else if(mimeTypeCurrent != mimeTypeSecond) {
-            return false;
-        } else {
-            command = "diff";
-            processBuilder.command(command,current.getAbsolutePath(), secondFile.getAbsolutePath());
-        }
+            BufferedImage first = ImageIO.read(current);
+            BufferedImage second = ImageIO.read(secondFile);
+            int proportionF = first.getHeight() / first.getWidth(), proportionS = second.getHeight() / second.getWidth();
+            if (proportionF != proportionS)
+                return false;
+            if (first.getHeight() > second.getHeight())
+                first = resizeImage(first, second.getWidth(), second.getHeight());
+            else if (first.getHeight() < second.getHeight())
+                second = resizeImage(second, first.getWidth(), first.getHeight());
 
-        Process process = processBuilder.start();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        List<String> result = new ArrayList<>();
-
-        while ((line = reader.readLine()) != null)
-            result.add(line);
-
-        if(command.equals("diff")) {
-            return result.size() == 0;
-        } else if(!(result.get(result.size()-1).equals("PASS"))){ //failure
-            String firstSplitParentheses =  result.get(result.size()-2).split("\\(")[1];
-            String finalSplit = firstSplitParentheses.split("\\)")[0];
-            double percentage =  100 - Double.parseDouble(finalSplit.substring(0,finalSplit.length()-1));
+            int different = 0, equal = 0;
+            for (int y = 0; y < first.getHeight(); y++) {
+                for (int x = 0; x < first.getWidth(); x++) {
+                    // Compare the pixels for equality.
+                    if (first.getRGB(x, y) != second.getRGB(x, y))
+                        different++;
+                    else
+                        equal++;
+                }
+            }
+            int percentage=equal/(equal+different)*100;
             return percentage >= userPercentage;
+
+        }else if(mimeTypeCurrent != mimeTypeSecond) {
+            return false;
+        }else {
+            ProcessBuilder processBuilder = new ProcessBuilder();
+            processBuilder.command("diff", current.getAbsolutePath(), secondFile.getAbsolutePath());
+            Process process = processBuilder.start();
+            String line;
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            List<String> result = new ArrayList<>();
+
+            while ((line = reader.readLine()) != null)
+                result.add(line);
+
+            return result.size() == 0;
         }
-        return true;
+
     }
 
     private static int deleteEmptyFolders(File folder, int counter) {
@@ -159,6 +209,15 @@ public class Main {
         }
         if(!found)
             System.out.println("There aren't any duplicated files");
+    }
+
+    public static BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight) throws IOException {
+        BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics2D = resizedImage.createGraphics();
+        graphics2D.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        graphics2D.drawImage(originalImage, 0, 0, targetWidth, targetHeight, null);
+        graphics2D.dispose();
+        return resizedImage;
     }
 
     public static void main(String[] args) {
