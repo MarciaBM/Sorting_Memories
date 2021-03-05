@@ -13,88 +13,81 @@ public class Main {
 
     private static String getMimeType(File f) throws IOException {
         String mimetype = Files.probeContentType(f.toPath());
+        if(mimetype == null)
+            return null;
         return (mimetype.split("/")[0]);
     }
 
-//    private static boolean isDuplicatedProcess(File current, File secondFile, int userPercentage) throws IOException{
-//
-//        ProcessBuilder processBuilder = new ProcessBuilder();
-//        String command, line;
-//        boolean mimeTypeCurrent = getMimeType(current).equals("image"),
-//                mimeTypeSecond = getMimeType(secondFile).equals("image");
-//
-//        if(mimeTypeCurrent && mimeTypeSecond) {
-//            command = "idiff";
-//            processBuilder.command(command,"-p",current.getAbsolutePath(), secondFile.getAbsolutePath());
-//        } else if(mimeTypeCurrent != mimeTypeSecond) {
-//            return false;
-//        } else {
-//            command = "diff";
-//            processBuilder.command(command,current.getAbsolutePath(), secondFile.getAbsolutePath());
-//        }
-//
-//        Process process = processBuilder.start();
-//        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-//        List<String> result = new ArrayList<>();
-//
-//        while ((line = reader.readLine()) != null)
-//            result.add(line);
-//
-//        if(command.equals("diff")) {
-//            return result.size() == 0;
-//        } else if(!(result.get(result.size()-1).equals("PASS"))){ //failure
-//            String firstSplitParentheses =  result.get(result.size()-2).split("\\(")[1];
-//            String finalSplit = firstSplitParentheses.split("\\)")[0];
-//            double percentage =  100 - Double.parseDouble(finalSplit.substring(0,finalSplit.length()-1));
-//            return percentage >= userPercentage;
-//        }
-//        return true;
-//    }
-
-    private static boolean isDuplicatedProcess(File current, File secondFile, int userPercentage) throws IOException {
-        boolean mimeTypeCurrent = getMimeType(current).equals("image"),
-                mimeTypeSecond = getMimeType(secondFile).equals("image");
-
-        if(mimeTypeCurrent && mimeTypeSecond) {
-            BufferedImage first = ImageIO.read(current);
-            BufferedImage second = ImageIO.read(secondFile);
-            int proportionF = first.getHeight() / first.getWidth(), proportionS = second.getHeight() / second.getWidth();
-            if (proportionF != proportionS)
+    private static boolean isDuplicatedProcess(File current, File secondFile, int userPercentage) {
+        try {
+            String mimeType1=getMimeType(current), mimeType2=getMimeType(secondFile);
+            if(mimeType1 == null || mimeType2 == null)
                 return false;
-            if (first.getHeight() > second.getHeight())
-                first = resizeImage(first, second.getWidth(), second.getHeight());
-            else if (first.getHeight() < second.getHeight())
-                second = resizeImage(second, first.getWidth(), first.getHeight());
+            boolean mimeTypeCurrent = mimeType1.equals("image"),
+                    mimeTypeSecond = mimeType2.equals("image");
 
-            int different = 0, equal = 0;
-            for (int y = 0; y < first.getHeight(); y++) {
-                for (int x = 0; x < first.getWidth(); x++) {
-                    // Compare the pixels for equality.
-                    if (first.getRGB(x, y) != second.getRGB(x, y))
-                        different++;
-                    else
-                        equal++;
-                }
+            if (mimeTypeCurrent && mimeTypeSecond) {
+                BufferedImage first = ImageIO.read(current);
+                BufferedImage second = ImageIO.read(secondFile);
+                float proportionF = first.getHeight() / first.getWidth(), proportionS = second.getHeight() / second.getWidth();
+                if (proportionF != proportionS)
+                    return false;
+                if (first.getHeight() > second.getHeight())
+                    first = resizeImage(first, second.getWidth(), second.getHeight());
+                else if (first.getHeight() < second.getHeight())
+                    second = resizeImage(second, first.getWidth(), first.getHeight());
+
+                return getPhotoPercentage(first,second) >= userPercentage;
+
+            } else if (mimeTypeCurrent != mimeTypeSecond) {
+                return false;
+            } else {
+                ProcessBuilder processBuilder = new ProcessBuilder();
+                processBuilder.command("diff", current.getAbsolutePath(), secondFile.getAbsolutePath());
+                Process process = processBuilder.start();
+                String line;
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                List<String> result = new ArrayList<>();
+
+                while ((line = reader.readLine()) != null)
+                    result.add(line);
+
+                return result.size() == 0;
             }
-            int percentage=equal/(equal+different)*100;
-            return percentage >= userPercentage;
-
-        }else if(mimeTypeCurrent != mimeTypeSecond) {
+        }catch(IOException e){
             return false;
-        }else {
-            ProcessBuilder processBuilder = new ProcessBuilder();
-            processBuilder.command("diff", current.getAbsolutePath(), secondFile.getAbsolutePath());
-            Process process = processBuilder.start();
-            String line;
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            List<String> result = new ArrayList<>();
+        }
+    }
 
-            while ((line = reader.readLine()) != null)
-                result.add(line);
+    //code by geeksforgeeks.org
+    private static double getPhotoPercentage(BufferedImage first,BufferedImage second){
+        int width1 = first.getWidth();
+        int height1 = first.getHeight();
 
-            return result.size() == 0;
+        long difference = 0;
+        for (int y = 0; y < height1; y++) {
+            for (int x = 0; x < width1; x++) {
+                int rgbA = first.getRGB(x, y);
+                int rgbB = second.getRGB(x, y);
+                int redA = (rgbA >> 16) & 0xff;
+                int greenA = (rgbA >> 8) & 0xff;
+                int blueA = (rgbA) & 0xff;
+                int redB = (rgbB >> 16) & 0xff;
+                int greenB = (rgbB >> 8) & 0xff;
+                int blueB = (rgbB) & 0xff;
+                difference += Math.abs(redA - redB);
+                difference += Math.abs(greenA - greenB);
+                difference += Math.abs(blueA - blueB);
+            }
         }
 
+        double total_pixels = width1 * height1 * 3;
+        double avg_different_pixels = difference /
+                total_pixels;
+
+        double percentage = (avg_different_pixels /
+                255) * 100;
+        return 100-percentage;
     }
 
     private static int deleteEmptyFolders(File folder, int counter) {
@@ -123,7 +116,7 @@ public class Main {
         return recursiveFileList.iterator();
     }
 
-    private static void deleteDuplicatedFiles(Scanner in,File folder) throws IOException{
+    private static void deleteDuplicatedFiles(Scanner in,File folder){
         Map<File, FileProperties> files = new HashMap<>();
         for(File f:folder.listFiles()) {
             Iterator<File> it = getFile(f, new ArrayList<>());
@@ -142,6 +135,7 @@ public class Main {
                 toDelete.add(current);
 
                 for (int j = i + 1; j < files.size(); j++) {
+                    System.out.println("File " + i+": " + j + "/" + files.size());
                     File secondFile = list.get(j);
                     if(!files.get(secondFile).getSeen() && !files.get(secondFile).getToDelete()) {
                         if (isDuplicatedProcess(current, secondFile,percentage)) {
@@ -244,7 +238,7 @@ public class Main {
 
             System.out.println(deleteEmptyFolders(folder, 0) + " empty folders were deleted.");
 
-        } catch (ScriptException | IOException e) {
+        } catch (ScriptException e) {
             System.out.println(e.getMessage());
         }
     }
