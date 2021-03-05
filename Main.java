@@ -11,50 +11,48 @@ import java.util.List;
 
 public class Main {
 
-    private static String getMimeType(File f) throws IOException {
-        String mimetype = Files.probeContentType(f.toPath());
-        if(mimetype == null)
-            return null;
-        return (mimetype.split("/")[0]);
+
+    private static String getMimeType(File f)  {
+        try {
+            String mimetype = Files.probeContentType(f.toPath());
+            if(mimetype == null)
+                return "";
+            return (mimetype.split("/")[0]);
+        } catch (IOException e) {
+            return "";
+        }
+    }
+    private static boolean isDuplicatedImage(BufferedImage first, BufferedImage second, int userPercentage) {
+        try {
+            if (first.getHeight() > second.getHeight()) {
+                first = resizeImage(first, second.getWidth(), second.getHeight());
+            }
+            else if (first.getHeight() < second.getHeight())
+                second = resizeImage(second, first.getWidth(), first.getHeight());
+
+            return getPhotoPercentage(first,second) >= userPercentage;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
-    private static boolean isDuplicatedProcess(File current, File secondFile, int userPercentage) {
+    private static boolean isDuplicatedVideo(File current, File secondFile) {
+        String mimeType1=getMimeType(current), mimeType2=getMimeType(secondFile);
+        if(!mimeType1.equals(mimeType2))
+            return false;
         try {
-            String mimeType1=getMimeType(current), mimeType2=getMimeType(secondFile);
-            if(mimeType1 == null || mimeType2 == null)
-                return false;
-            boolean mimeTypeCurrent = mimeType1.equals("image"),
-                    mimeTypeSecond = mimeType2.equals("image");
+            ProcessBuilder processBuilder = new ProcessBuilder();
+            processBuilder.command("diff", current.getAbsolutePath(), secondFile.getAbsolutePath());
+            Process process = processBuilder.start();
+            String line;
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            List<String> result = new ArrayList<>();
 
-            if (mimeTypeCurrent && mimeTypeSecond) {
-                BufferedImage first = ImageIO.read(current);
-                BufferedImage second = ImageIO.read(secondFile);
-                float proportionF = first.getHeight() / first.getWidth(), proportionS = second.getHeight() / second.getWidth();
-                if (proportionF != proportionS)
-                    return false;
-                if (first.getHeight() > second.getHeight())
-                    first = resizeImage(first, second.getWidth(), second.getHeight());
-                else if (first.getHeight() < second.getHeight())
-                    second = resizeImage(second, first.getWidth(), first.getHeight());
+            while ((line = reader.readLine()) != null)
+                result.add(line);
 
-                return getPhotoPercentage(first,second) >= userPercentage;
-
-            } else if (mimeTypeCurrent != mimeTypeSecond) {
-                return false;
-            } else {
-                ProcessBuilder processBuilder = new ProcessBuilder();
-                processBuilder.command("diff", current.getAbsolutePath(), secondFile.getAbsolutePath());
-                Process process = processBuilder.start();
-                String line;
-                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                List<String> result = new ArrayList<>();
-
-                while ((line = reader.readLine()) != null)
-                    result.add(line);
-
-                return result.size() == 0;
-            }
-        }catch(IOException e){
+            return result.size() == 0;
+        } catch (IOException e) {
             return false;
         }
     }
@@ -116,38 +114,71 @@ public class Main {
         return recursiveFileList.iterator();
     }
 
-    private static void deleteDuplicatedFiles(Scanner in,File folder){
-        Map<File, FileProperties> files = new HashMap<>();
+    private static void getMaps(Scanner in,File folder){
+        Map<Float, List<FileProperties>> images = new HashMap<>();
+        Map<Long, List<FileProperties>> videos = new HashMap<>();
+        int i = 0;
         for(File f:folder.listFiles()) {
             Iterator<File> it = getFile(f, new ArrayList<>());
-            while (it.hasNext()) files.put(it.next(), new FileProperties(false, false));
-        }
-        File current;
-        List<File> list = new ArrayList<>(files.keySet());
-        int percentage = getPercentage(in);
-
-        for(int i = 0;i<files.size()-1;i++) {
-            File file = list.get(i);
-            System.out.println("File: " + i + "/" + files.size());
-            if (!files.get(file).getSeen() && !files.get(file).getToDelete()) {
-                current = file;
-                List<File> toDelete = new ArrayList<>();
-                toDelete.add(current);
-
-                for (int j = i + 1; j < files.size(); j++) {
-                    System.out.println("File " + i+": " + j + "/" + files.size());
-                    File secondFile = list.get(j);
-                    if(!files.get(secondFile).getSeen() && !files.get(secondFile).getToDelete()) {
-                        if (isDuplicatedProcess(current, secondFile,percentage)) {
-                            toDelete.add(secondFile);
-                            files.get(secondFile).setSeen(true);
+            while (it.hasNext()) {
+                i++;
+                System.out.println(i);
+                File file=it.next();
+                if(getMimeType(file).equals("image")) {
+                    try {
+                        BufferedImage first = ImageIO.read(file);
+                        if(first!=null){
+                            float proportion = (float)first.getHeight()/(float)first.getWidth();
+                            //proportion = Float.parseFloat(String.format("%.2f",proportion));
+                            if(!images.containsKey(proportion))
+                                images.put(proportion,new ArrayList<>());
+                            images.get(proportion).add(new FileProperties(first,file, false, false));
                         }
-                    }
+                    } catch (IOException ignored) { }
+                }else if(!getMimeType(file).equals("")){
+                    long size=file.length();
+                    if(!videos.containsKey(size))
+                        videos.put(size,new ArrayList<>());
+                    videos.get(size).add(new FileProperties(null,file,false,false));
                 }
-                chooseToDelete(in,toDelete,files);
             }
         }
-        deleteFiles(files);
+        int percentage=getPercentage(in);
+        deleteDuplicatedFiles(in,images.values().iterator(),true,percentage);
+        deleteDuplicatedFiles(in,videos.values().iterator(),false,percentage);
+    }
+
+    private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator,boolean isImage,int percentage){
+        while(iterator.hasNext()){
+            List<FileProperties> files = iterator.next();
+            for(int i = 0;i<files.size()-1;i++) {
+                FileProperties fileP = files.get(i);
+                System.out.println("File: " + i + "/" + files.size());
+                if (!files.get(i).getSeen() && !files.get(i).getToDelete()) {
+                    List<File> toDelete = new ArrayList<>();
+                    toDelete.add(fileP.getFile());
+                    for (int j = i + 1; j < files.size(); j++) {
+                        System.out.println("File " + i+": " + j + "/" + files.size());
+                        FileProperties secondFileP = files.get(j);
+                        if(!files.get(j).getSeen() && !files.get(j).getToDelete()) {
+                            if(isImage) {
+                                if (isDuplicatedImage(fileP.getBi(), secondFileP.getBi(), percentage)) {
+                                    toDelete.add(secondFileP.getFile());
+                                    files.get(j).setSeen(true);
+                                }
+                            }else{
+                                if (isDuplicatedVideo(fileP.getFile(), secondFileP.getFile())) {
+                                    toDelete.add(secondFileP.getFile());
+                                    files.get(j).setSeen(true);
+                                }
+                            }
+                        }
+                    }
+                    chooseToDelete(in,toDelete,files);
+                }
+            }
+            deleteFiles(files);
+        }
     }
 
     private static int getPercentage(Scanner in){
@@ -163,7 +194,7 @@ public class Main {
         }
     }
 
-    private static void chooseToDelete(Scanner in,List<File> toDelete, Map<File, FileProperties> files){
+    private static void chooseToDelete(Scanner in,List<File> toDelete, List<FileProperties> files){
         if (toDelete.size() > 1) {
             System.out.println("Duplicated files have been found, please choose the ones you want to delete (separate them with space):");
             for (int m = 0; m < toDelete.size(); m++) {
@@ -185,19 +216,26 @@ public class Main {
                                 accepted=false;
                                 break;
                             }
-                            files.get(toDelete.get(index)).setToDelete(true);
+                            files.get(getIndex(files,toDelete.get(index))).setToDelete(true);
                         }
                     }
                 }
             }
         }
     }
+    private static int getIndex(List<FileProperties> files,File file){
+        for(int i = 0;i<files.size();i++){
+            if(files.get(i).getFile()==file)
+                return i;
+        }
+        return 0;
+    }
 
-    private static void deleteFiles(Map<File, FileProperties> files){
+    private static void deleteFiles(List<FileProperties> files){
         boolean found = false;
-        for (File key : files.keySet()) {
-            if (files.get(key).getToDelete()) {
-                key.delete();
+        for (FileProperties key : files) {
+            if (key.getToDelete()) {
+                key.getFile().delete();
                 found=true;
             }
         }
@@ -234,7 +272,7 @@ public class Main {
 
             //delete duplicated files
             folder = new File(directory);
-            deleteDuplicatedFiles(in, folder);
+            getMaps(in, folder);
 
             System.out.println(deleteEmptyFolders(folder, 0) + " empty folders were deleted.");
 
@@ -247,9 +285,13 @@ public class Main {
 class FileProperties{
     private boolean toDelete;
     private boolean seen;
-    public FileProperties(boolean toDelete, boolean seen){
+    private File file;
+    private BufferedImage bi;
+    public FileProperties(BufferedImage bi, File file,boolean toDelete, boolean seen){
         this.seen = seen;
         this.toDelete = toDelete;
+        this.file=file;
+        this.bi=bi;
     }
 
     public boolean getToDelete(){
@@ -266,6 +308,14 @@ class FileProperties{
 
     public void setSeen(boolean seen){
         this.seen = seen;
+    }
+
+    public File getFile(){
+        return file;
+    }
+
+    public BufferedImage getBi(){
+        return bi;
     }
 }
 
