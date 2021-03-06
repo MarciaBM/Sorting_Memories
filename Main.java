@@ -1,10 +1,12 @@
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.FileImageInputStream;
+import javax.imageio.stream.ImageInputStream;
+import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.net.URL;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.List;
@@ -22,6 +24,7 @@ public class Main {
             return "";
         }
     }
+
     private static boolean isDuplicatedImage(BufferedImage first, BufferedImage second, int userPercentage) {
         try {
             if (first.getHeight() > second.getHeight()) {
@@ -125,21 +128,18 @@ public class Main {
                 System.out.println(i);
                 File file=it.next();
                 if(getMimeType(file).equals("image")) {
-                    try {
-                        BufferedImage first = ImageIO.read(file);
-                        if(first!=null){
-                            float proportion = (float)first.getHeight()/(float)first.getWidth();
-                            //proportion = Float.parseFloat(String.format("%.2f",proportion));
-                            if(!images.containsKey(proportion))
-                                images.put(proportion,new ArrayList<>());
-                            images.get(proportion).add(new FileProperties(first,file, false, false));
-                        }
-                    } catch (IOException ignored) { }
+                    Dimension d = getImageDimension(file);
+                    if(d!=null){
+                        float proportion = (float)d.height/(float)d.width;
+                        if(!images.containsKey(proportion))
+                            images.put(proportion,new ArrayList<>());
+                        images.get(proportion).add(new FileProperties(file, false, false));
+                    }
                 }else if(!getMimeType(file).equals("")){
                     long size=file.length();
                     if(!videos.containsKey(size))
                         videos.put(size,new ArrayList<>());
-                    videos.get(size).add(new FileProperties(null,file,false,false));
+                    videos.get(size).add(new FileProperties(file,false,false));
                 }
             }
         }
@@ -148,34 +148,63 @@ public class Main {
         deleteDuplicatedFiles(in,videos.values().iterator(),false,percentage);
     }
 
+    public static Dimension getImageDimension(File imgFile){
+        int pos = imgFile.getName().lastIndexOf(".");
+        try {
+            if (pos == -1)
+                throw new IOException("No extension for file: " + imgFile.getAbsolutePath());
+            String suffix = imgFile.getName().substring(pos + 1);
+            Iterator<ImageReader> iter = ImageIO.getImageReadersBySuffix(suffix);
+            if (iter.hasNext()) {
+                ImageReader reader = iter.next();
+                ImageInputStream stream = new FileImageInputStream(imgFile);
+                reader.setInput(stream);
+                int width = reader.getWidth(reader.getMinIndex());
+                int height = reader.getHeight(reader.getMinIndex());
+                reader.dispose();
+                return new Dimension(width, height);
+            }
+        } catch (IOException e) {
+            return null;
+        }
+        return null;
+    }
+
     private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator,boolean isImage,int percentage){
         while(iterator.hasNext()){
             List<FileProperties> files = iterator.next();
             for(int i = 0;i<files.size()-1;i++) {
-                FileProperties fileP = files.get(i);
+                File file = files.get(i).getFile();
                 System.out.println("File: " + i + "/" + files.size());
-                if (!files.get(i).getSeen() && !files.get(i).getToDelete()) {
-                    List<File> toDelete = new ArrayList<>();
-                    toDelete.add(fileP.getFile());
-                    for (int j = i + 1; j < files.size(); j++) {
-                        System.out.println("File " + i+": " + j + "/" + files.size());
-                        FileProperties secondFileP = files.get(j);
-                        if(!files.get(j).getSeen() && !files.get(j).getToDelete()) {
-                            if(isImage) {
-                                if (isDuplicatedImage(fileP.getBi(), secondFileP.getBi(), percentage)) {
-                                    toDelete.add(secondFileP.getFile());
-                                    files.get(j).setSeen(true);
-                                }
-                            }else{
-                                if (isDuplicatedVideo(fileP.getFile(), secondFileP.getFile())) {
-                                    toDelete.add(secondFileP.getFile());
-                                    files.get(j).setSeen(true);
+                try {
+                    BufferedImage first = null;
+                    if(isImage)
+                        first = ImageIO.read(file);
+                    if(first != null || !isImage) {
+                        if (!files.get(i).getSeen() && !files.get(i).getToDelete()) {
+                            List<File> toDelete = new ArrayList<>();
+                            toDelete.add(file);
+                            for (int j = i + 1; j < files.size(); j++) {
+                                System.out.println("File " + i + ": " + j + "/" + files.size());
+                                File secondFile = files.get(j).getFile();
+                                if (!files.get(j).getSeen() && !files.get(j).getToDelete()) {
+                                    if (isImage) {
+                                        if (isDuplicatedImage(first, ImageIO.read(secondFile), percentage)) {
+                                            toDelete.add(secondFile);
+                                            files.get(j).setSeen(true);
+                                        }
+                                    } else {
+                                        if (isDuplicatedVideo(file, secondFile)) {
+                                            toDelete.add(secondFile);
+                                            files.get(j).setSeen(true);
+                                        }
+                                    }
                                 }
                             }
+                            chooseToDelete(in, toDelete, files);
                         }
                     }
-                    chooseToDelete(in,toDelete,files);
-                }
+                } catch (IOException ignored) { }
             }
             deleteFiles(files);
         }
@@ -183,7 +212,6 @@ public class Main {
 
     private static int getPercentage(Scanner in){
         System.out.println("Enter the equality percentage to compare the photos:");
-
         while(true) {
             String answer = in.nextLine().trim();
             if(answer.matches("[0-9]+")){
@@ -286,12 +314,11 @@ class FileProperties{
     private boolean toDelete;
     private boolean seen;
     private File file;
-    private BufferedImage bi;
-    public FileProperties(BufferedImage bi, File file,boolean toDelete, boolean seen){
+
+    public FileProperties(File file,boolean toDelete, boolean seen){
         this.seen = seen;
         this.toDelete = toDelete;
         this.file=file;
-        this.bi=bi;
     }
 
     public boolean getToDelete(){
@@ -312,10 +339,6 @@ class FileProperties{
 
     public File getFile(){
         return file;
-    }
-
-    public BufferedImage getBi(){
-        return bi;
     }
 }
 
