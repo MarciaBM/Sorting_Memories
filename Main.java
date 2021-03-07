@@ -117,8 +117,22 @@ public class Main {
         return recursiveFileList.iterator();
     }
 
-    private static void getMaps(Scanner in,File folder){
+    private static Map<Float, List<FileProperties>> populateMapsWithAspectRatio(){
         Map<Float, List<FileProperties>> images = new HashMap<>();
+        images.put((float)16/9, new ArrayList<>());
+        images.put((float)9/16, new ArrayList<>());
+        images.put((float)4/3, new ArrayList<>());
+        images.put((float)3/4, new ArrayList<>());
+        images.put((float)3/2,new ArrayList<>());
+        images.put((float)2/3,new ArrayList<>());
+        images.put(0.6f,new ArrayList<>());
+        images.put(1.00f, new ArrayList<>());
+        images.put(-1.00f, new ArrayList<>());
+        return images;
+    }
+
+    private static void getMaps(Scanner in,File folder){
+        Map<Float, List<FileProperties>> images = populateMapsWithAspectRatio();
         Map<Long, List<FileProperties>> videos = new HashMap<>();
         int i = 0;
         for(File f:folder.listFiles()) {
@@ -130,10 +144,16 @@ public class Main {
                 if(getMimeType(file).equals("image")) {
                     Dimension d = getImageDimension(file);
                     if(d!=null){
-                        float proportion = (float)d.height/(float)d.width;
-                        if(!images.containsKey(proportion))
-                            images.put(proportion,new ArrayList<>());
-                        images.get(proportion).add(new FileProperties(file, false, false));
+                        float proportion = (float)d.height/(float)d.width, valueInMap = -1.00f;
+                        final float marginProportion = 0.02f;
+                        Set<Float> aspectRatios = images.keySet();
+
+                        for (float aR : aspectRatios)
+                            if(Math.abs(proportion-aR)<=marginProportion)
+                                valueInMap = aR;
+
+                        images.get(valueInMap).add(new FileProperties(file, false, false));
+
                     }
                 }else if(!getMimeType(file).equals("")){
                     long size=file.length();
