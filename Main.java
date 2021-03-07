@@ -2,11 +2,9 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.ImageInputStream;
-import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.net.URL;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.List;
@@ -152,14 +150,14 @@ public class Main {
                             if(Math.abs(proportion-aR)<=marginProportion)
                                 valueInMap = aR;
 
-                        images.get(valueInMap).add(new FileProperties(file, false, false));
+                        images.get(valueInMap).add(new FileProperties(file, false, false,proportion));
 
                     }
                 }else if(!getMimeType(file).equals("")){
                     long size=file.length();
                     if(!videos.containsKey(size))
                         videos.put(size,new ArrayList<>());
-                    videos.get(size).add(new FileProperties(file,false,false));
+                    videos.get(size).add(new FileProperties(file,false,false,-1.0f));
                 }
             }
         }
@@ -209,9 +207,11 @@ public class Main {
                                 File secondFile = files.get(j).getFile();
                                 if (!files.get(j).getSeen() && !files.get(j).getToDelete()) {
                                     if (isImage) {
-                                        if (isDuplicatedImage(first, ImageIO.read(secondFile), percentage)) {
-                                            toDelete.add(secondFile);
-                                            files.get(j).setSeen(true);
+                                        if(Math.abs(files.get(i).getProportion()-files.get(j).getProportion())<=0.02f) {
+                                            if (isDuplicatedImage(first, ImageIO.read(secondFile), percentage)) {
+                                                toDelete.add(secondFile);
+                                                files.get(j).setSeen(true);
+                                            }
                                         }
                                     } else {
                                         if (isDuplicatedVideo(file, secondFile)) {
@@ -271,6 +271,7 @@ public class Main {
             }
         }
     }
+
     private static int getIndex(List<FileProperties> files,File file){
         for(int i = 0;i<files.size();i++){
             if(files.get(i).getFile()==file)
@@ -334,11 +335,13 @@ class FileProperties{
     private boolean toDelete;
     private boolean seen;
     private File file;
+    private float proportion;
 
-    public FileProperties(File file,boolean toDelete, boolean seen){
+    public FileProperties(File file,boolean toDelete, boolean seen, float proportion){
         this.seen = seen;
         this.toDelete = toDelete;
         this.file=file;
+        this.proportion = proportion;
     }
 
     public boolean getToDelete(){
@@ -359,6 +362,10 @@ class FileProperties{
 
     public File getFile(){
         return file;
+    }
+
+    public float getProportion(){
+        return proportion;
     }
 }
 
