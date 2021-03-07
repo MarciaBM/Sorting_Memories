@@ -25,10 +25,13 @@ public class Main {
 
     private static boolean isDuplicatedImage(BufferedImage first, BufferedImage second, int userPercentage) {
         try {
-            if (first.getHeight() > second.getHeight()) {
+            if (first.getHeight() > second.getHeight())
                 first = resizeImage(first, second.getWidth(), second.getHeight());
-            }
             else if (first.getHeight() < second.getHeight())
+                second = resizeImage(second, first.getWidth(), first.getHeight());
+            else if(first.getWidth() > second.getWidth())
+                first = resizeImage(first, second.getWidth(), second.getHeight());
+            else if (first.getWidth() < second.getWidth())
                 second = resizeImage(second, first.getWidth(), first.getHeight());
 
             return getPhotoPercentage(first,second) >= userPercentage;
