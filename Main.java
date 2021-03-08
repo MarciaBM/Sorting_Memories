@@ -11,6 +11,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.lang.reflect.Array;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.List;
@@ -140,15 +141,42 @@ public class Main {
         return images;
     }
 
+    private static List<Integer> printStages(Scanner in, Iterator<List<FileProperties>> images, int sumVideos){
+        System.out.println("Images:");
+        int n = 1, sum=0;
+        while(images.hasNext()) {
+            int size=images.next().size();
+            System.out.println("Stage " + n + ": " + size + " files.");
+            n++;
+            sum+=size;
+        }
+        System.out.println("Total images: " + sum);
+        System.out.println("Total videos and others: " + sumVideos + "\n");
+        System.out.println("Which images stages do you want to run? (Separate numbers with spaces or 'A' to run all of them):");
+
+        while(true) {
+            String choice = in.nextLine().trim();
+            if (choice.matches("[1-9 ]+|A")){
+                List<Integer> result = new ArrayList<>();
+                if(choice.equals("A"))
+                    result.add(-1);
+                else{
+                    String[] answer = choice.split(" ");
+                    for (String s : answer) result.add(Integer.parseInt(s));
+                }
+                return result;
+            }
+        }
+    }
+
     private static void getMaps(Scanner in,File folder){
         Map<Float, List<FileProperties>> images = populateMapsWithAspectRatio();
         Map<Long, List<FileProperties>> videos = new HashMap<>();
-        int i = 0;
+        int sumVideos=0;
+        System.out.println("Loading files...");
         for(File f:folder.listFiles()) {
             Iterator<File> it = getFile(f, new ArrayList<>());
             while (it.hasNext()) {
-                i++;
-                System.out.println(i);
                 File file=it.next();
                 if(getMimeType(file).equals("image")) {
                     Dimension d = getImageDimension(file);
@@ -164,6 +192,7 @@ public class Main {
                         images.get(valueInMap).add(new FileProperties(file, false, false,d,getExifDate(file)));
                     }
                 }else if(!getMimeType(file).equals("")){
+                    sumVideos++;
                     long size=file.length();
                     if(!videos.containsKey(size))
                         videos.put(size,new ArrayList<>());
@@ -171,10 +200,11 @@ public class Main {
                 }
             }
         }
+        List<Integer> result=printStages(in,images.values().iterator(),sumVideos);
         int percentage=getPercentage(in);
-        deleteDuplicatedFiles(in,images.values().iterator(),true,percentage);
+        deleteDuplicatedFiles(in,images.values().iterator(),result,true,percentage);
         if(!System.getProperty("os.name").toLowerCase().contains("win"))
-            deleteDuplicatedFiles(in,videos.values().iterator(),false,percentage);
+            deleteDuplicatedFiles(in,videos.values().iterator(),result,false,percentage);
     }
 
     public static Dimension getImageDimension(File imgFile){
@@ -199,54 +229,59 @@ public class Main {
         return null;
     }
 
-    private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator,boolean isImage,int percentage){
-        int n = 0;
+    private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator, List<Integer> stages,boolean isImage,int percentage){
+        int n = 0, stage=0;
         while(iterator.hasNext()){
+            stage++;
             List<FileProperties> files = iterator.next();
-            for(int i = 0;i<files.size()-1;i++) {
-                FileProperties fileP = files.get(i);
-                n++;
-                System.out.println("File: " + n);
-                try {
-                    BufferedImage first = null;
-                    if(isImage)
-                        first = ImageIO.read(fileP.getFile());
-                    if(first != null || !isImage) {
-                        if (!files.get(i).getSeen() && !files.get(i).getToDelete()) {
-                            List<FileProperties> toDelete = new ArrayList<>();
-                            toDelete.add(fileP);
-                            for (int j = i + 1; j < files.size(); j++) {
-                                System.out.println("File " + n + ": " + j + "/" + files.size());
-                                FileProperties secondFileP = files.get(j);
-                                if (!files.get(j).getSeen() && !files.get(j).getToDelete()) {
-                                    boolean cantCompare = false;
-                                    if (fileP.getDate()!=null && secondFileP.getDate()!=null)
-                                        if(TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getTime()-secondFileP.getDate().getTime()), TimeUnit.MILLISECONDS)>1) {
-                                            cantCompare = true;
-                                            System.out.println("yeeeeeeeeeeeei");
-                                        }
-                                    if (isImage) {
-                                        if(Math.abs(files.get(i).getProportion()-files.get(j).getProportion())<=0.02f && !cantCompare) {
-                                            if (isDuplicatedImage(first, ImageIO.read(secondFileP.getFile()), percentage)) {
-                                                toDelete.add(secondFileP);
-                                                files.get(j).setSeen(true);
+            if(stages.contains(stage) || stages.contains(-1) || !isImage) {
+                System.out.println("Stage " + stage + ":");
+                for (int i = 0; i < files.size() - 1; i++) {
+                    FileProperties fileP = files.get(i);
+                    n++;
+                    System.out.println("File: " + n);
+                    try {
+                        BufferedImage first = null;
+                        if (isImage)
+                            first = ImageIO.read(fileP.getFile());
+                        if (first != null || !isImage) {
+                            if (!files.get(i).getSeen() && !files.get(i).getToDelete()) {
+                                List<FileProperties> toDelete = new ArrayList<>();
+                                toDelete.add(fileP);
+                                for (int j = i + 1; j < files.size(); j++) {
+                                    System.out.println("File " + n + ": " + j + "/" + files.size());
+                                    FileProperties secondFileP = files.get(j);
+                                    if (!files.get(j).getSeen() && !files.get(j).getToDelete()) {
+                                        boolean cantCompare = false;
+                                        if (fileP.getDate() != null && secondFileP.getDate() != null)
+                                            if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getTime() - secondFileP.getDate().getTime()), TimeUnit.MILLISECONDS) > 1) {
+                                                cantCompare = true;
+                                                System.out.println("yeeeeeeeeeeeei");
                                             }
-                                        }
-                                    } else {
-                                        if(!cantCompare)
-                                            if (isDuplicatedVideo(fileP.getFile(), secondFileP.getFile())) {
-                                                toDelete.add(secondFileP);
-                                                files.get(j).setSeen(true);
+                                        if (isImage) {
+                                            if (Math.abs(files.get(i).getProportion() - files.get(j).getProportion()) <= 0.02f && !cantCompare) {
+                                                if (isDuplicatedImage(first, ImageIO.read(secondFileP.getFile()), percentage)) {
+                                                    toDelete.add(secondFileP);
+                                                    files.get(j).setSeen(true);
+                                                }
                                             }
+                                        } else {
+                                            if (!cantCompare)
+                                                if (isDuplicatedVideo(fileP.getFile(), secondFileP.getFile())) {
+                                                    toDelete.add(secondFileP);
+                                                    files.get(j).setSeen(true);
+                                                }
+                                        }
                                     }
                                 }
+                                chooseToDelete(in, toDelete, files, isImage);
                             }
-                            chooseToDelete(in, toDelete, files, isImage);
                         }
+                    } catch (IOException ignored) {
                     }
-                } catch (IOException ignored) { }
+                }
+                deleteFiles(files);
             }
-            deleteFiles(files);
         }
     }
 
