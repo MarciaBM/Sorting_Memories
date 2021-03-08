@@ -3,7 +3,7 @@
 [![Downloads](https://img.shields.io/github/downloads/MarciaBM/script-photos/total)]()
 [![Languages](https://img.shields.io/github/languages/top/MarciaBM/script-photos)]()
 
-This is a program made with **Java** to help you organize your messy folder of pictures and videos. Initially developed for the **Linux** operating system.
+This is a program made with **Java** to help you organize your messy folder of pictures and videos. Developed for the **Linux** and **MacOS** operating systems. You can run it on **Windows** but will only work for images, videos features will be disable.
 It will automatically delete empty sub-folders and will recursevily detect if you have duplicated photos. Then you will be able to choose wich ones you want to keep and wich ones you don't. Also you will be able to choose the percentage of equality of the photos you want the program to detect. About the videos, for now it will only detect duplicated videos with 100% match of equality.
 
 Later, we intend that the software will be able to organize your photos by year, using the date the photo was taken, if available.
@@ -19,12 +19,6 @@ For Ubuntu distros users:
 sudo apt install openjdk-11-jdk
 ```
 
-. You will need to have `openimageio-tools` library installed.
-For Ubuntu distros users:
-```
-sudo apt install openimageio-tools
-```
-
 Installation
 ------------------
 . Start for cloning our repository, you will need to have **Git** installed (usually it comes already installed on Linux).
@@ -35,10 +29,10 @@ Or you can just click on the Code green button and download the .zip file.
 
 . Open your terminal inside the downloaded folder at **script-photos/src** and run:
 ```
-javac Main.java
+javac -cp metadata-extractor-2.15.0.jar Main.java
 ```
 ```
-java Main [path of the folder you want to run the script]
+java -cp metadata-extractor-2.15.0.jar Main [path of the folder you want to run the script]
 ```
 
 And that's it, your running our script, hope you like it and enjoy it!
