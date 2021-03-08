@@ -18,6 +18,19 @@ For Ubuntu distros users:
 ```
 sudo apt install openjdk-11-jdk
 ```
+For MacOS users:
+If you don't have **brew** installed, install it by:
+```
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" 
+```
+To install Java:
+```
+brew install java11
+```
+```
+echo 'export PATH="/usr/local/opt/openjdk@11/bin:$PATH"' >> ~/.profile
+```
+And then reboot the terminal.
 
 Installation
 ------------------
