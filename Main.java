@@ -1,6 +1,5 @@
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
-import com.drew.metadata.Directory;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
 
@@ -8,16 +7,18 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.ImageInputStream;
+import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
-import java.time.LocalDate;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class Main {
+
+    private static final int PANEL_HEIGHT = 600;
 
     private static String getMimeType(File f)  {
         try {
@@ -160,13 +161,13 @@ public class Main {
                             if(Math.abs(proportion-aR)<=marginProportion)
                                 valueInMap = aR;
 
-                        images.get(valueInMap).add(new FileProperties(file, false, false,proportion,getExifDate(file)));
+                        images.get(valueInMap).add(new FileProperties(file, false, false,d,getExifDate(file)));
                     }
                 }else if(!getMimeType(file).equals("")){
                     long size=file.length();
                     if(!videos.containsKey(size))
                         videos.put(size,new ArrayList<>());
-                    videos.get(size).add(new FileProperties(file,false,false,-1.0f,getExifDate(file)));
+                    videos.get(size).add(new FileProperties(file,false,false,null,getExifDate(file)));
                 }
             }
         }
@@ -212,8 +213,8 @@ public class Main {
                         first = ImageIO.read(fileP.getFile());
                     if(first != null || !isImage) {
                         if (!files.get(i).getSeen() && !files.get(i).getToDelete()) {
-                            List<File> toDelete = new ArrayList<>();
-                            toDelete.add(fileP.getFile());
+                            List<FileProperties> toDelete = new ArrayList<>();
+                            toDelete.add(fileP);
                             for (int j = i + 1; j < files.size(); j++) {
                                 System.out.println("File " + n + ": " + j + "/" + files.size());
                                 FileProperties secondFileP = files.get(j);
@@ -227,20 +228,20 @@ public class Main {
                                     if (isImage) {
                                         if(Math.abs(files.get(i).getProportion()-files.get(j).getProportion())<=0.02f && !cantCompare) {
                                             if (isDuplicatedImage(first, ImageIO.read(secondFileP.getFile()), percentage)) {
-                                                toDelete.add(secondFileP.getFile());
+                                                toDelete.add(secondFileP);
                                                 files.get(j).setSeen(true);
                                             }
                                         }
                                     } else {
                                         if(!cantCompare)
                                             if (isDuplicatedVideo(fileP.getFile(), secondFileP.getFile())) {
-                                                toDelete.add(secondFileP.getFile());
+                                                toDelete.add(secondFileP);
                                                 files.get(j).setSeen(true);
                                             }
                                     }
                                 }
                             }
-                            chooseToDelete(in, toDelete, files);
+                            chooseToDelete(in, toDelete, files, isImage);
                         }
                     }
                 } catch (IOException ignored) { }
@@ -274,12 +275,31 @@ public class Main {
         }
     }
 
-    private static void chooseToDelete(Scanner in,List<File> toDelete, List<FileProperties> files){
+    private static void getPicture(FileProperties file){
+        int width = (int)(file.getDimension().getWidth()*PANEL_HEIGHT/file.getDimension().getHeight());
+        Image image = new ImageIcon(file.getFile().getAbsolutePath()).getImage();
+        JPanel jPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                g.drawImage(image, 0, 0, width, PANEL_HEIGHT,this);
+            }
+        };;
+        JFrame f = new JFrame();
+        f.setSize(new Dimension(width, PANEL_HEIGHT));
+        f.setTitle(file.getFile().getAbsolutePath());
+        f.add(jPanel);
+        f.setVisible(true);
+    }
+
+    private static void chooseToDelete(Scanner in,List<FileProperties> toDelete, List<FileProperties> files, boolean isImage){
         if (toDelete.size() > 1) {
             System.out.println("Duplicated files have been found, please choose the ones you want to delete (separate them with space):");
             for (int m = 0; m < toDelete.size(); m++) {
                 int aux = m + 1;
-                System.out.println(aux + ": " + toDelete.get(m).getAbsolutePath());
+                System.out.println(aux + ": " + toDelete.get(m).getFile().getAbsolutePath());
+                if(isImage)
+                    getPicture(toDelete.get(m));
             }
             System.out.println("E: Keep them all");
             //user
@@ -296,7 +316,7 @@ public class Main {
                                 accepted=false;
                                 break;
                             }
-                            files.get(getIndex(files,toDelete.get(index))).setToDelete(true);
+                            files.get(getIndex(files,toDelete.get(index).getFile())).setToDelete(true);
                         }
                     }
                 }
@@ -367,14 +387,14 @@ class FileProperties{
     private boolean toDelete;
     private boolean seen;
     private File file;
-    private float proportion;
+    private Dimension dimension;
     private Date date;
 
-    public FileProperties(File file,boolean toDelete, boolean seen, float proportion, Date date){
+    public FileProperties(File file,boolean toDelete, boolean seen, Dimension dimension, Date date){
         this.seen = seen;
         this.toDelete = toDelete;
         this.file=file;
-        this.proportion = proportion;
+        this.dimension=dimension;
         this.date=date;
     }
 
@@ -399,7 +419,11 @@ class FileProperties{
     }
 
     public float getProportion(){
-        return proportion;
+        return (float)dimension.height/(float)dimension.width;
+    }
+
+    public Dimension getDimension(){
+        return dimension;
     }
 
     public Date getDate(){
