@@ -353,6 +353,8 @@ public class Main {
         return resizedImage;
     }
 
+    public static void organizeFiles(){}
+
     public static void main(String[] args) {
 
         try {
@@ -368,14 +370,32 @@ public class Main {
             if(!folder.isDirectory())
                 throw new ScriptException("Please insert a folder's directory");
 
-            //delete empty folders
-            System.out.println(deleteEmptyFolders(folder,0) + " empty folders were deleted.");
+            String command ="";
+            while(!command.equals("E")){
+                System.out.println("Choose what you want to do:");
+                System.out.println("[1] - Delete empty folders");
+                System.out.println("[2] - Delete duplicated files");
+                System.out.println("[3] - Organize files by year");
+                command = in.next();
 
-            //delete duplicated files
-            folder = new File(directory);
-            getMaps(in, folder);
-
-            System.out.println(deleteEmptyFolders(folder, 0) + " empty folders were deleted.");
+                switch (command) {
+                    case "1":
+                        System.out.println(deleteEmptyFolders(folder, 0) + " empty folders were deleted.");
+                        break;
+                    case "2":
+                        folder = new File(directory);
+                        getMaps(in, folder);
+                        break;
+                    case "3":
+                        organizeFiles();
+                        break;
+                    case "E":
+                        System.out.println("Hope you come back :)");
+                        break;
+                    default:
+                        System.out.println("Invalid command");
+                }
+            }
 
         } catch (ScriptException e) {
             System.out.println(e.getMessage());
