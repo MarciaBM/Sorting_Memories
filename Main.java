@@ -1,3 +1,9 @@
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.imaging.ImageProcessingException;
+import com.drew.metadata.Directory;
+import com.drew.metadata.Metadata;
+import com.drew.metadata.exif.ExifSubIFDDirectory;
+
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.FileImageInputStream;
@@ -6,11 +12,12 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class Main {
-
 
     private static String getMimeType(File f)  {
         try {
@@ -153,14 +160,13 @@ public class Main {
                             if(Math.abs(proportion-aR)<=marginProportion)
                                 valueInMap = aR;
 
-                        images.get(valueInMap).add(new FileProperties(file, false, false,proportion));
-
+                        images.get(valueInMap).add(new FileProperties(file, false, false,proportion,getExifDate(file)));
                     }
                 }else if(!getMimeType(file).equals("")){
                     long size=file.length();
                     if(!videos.containsKey(size))
                         videos.put(size,new ArrayList<>());
-                    videos.get(size).add(new FileProperties(file,false,false,-1.0f));
+                    videos.get(size).add(new FileProperties(file,false,false,-1.0f,getExifDate(file)));
                 }
             }
         }
@@ -192,35 +198,44 @@ public class Main {
     }
 
     private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator,boolean isImage,int percentage){
+        int n = 0;
         while(iterator.hasNext()){
             List<FileProperties> files = iterator.next();
             for(int i = 0;i<files.size()-1;i++) {
-                File file = files.get(i).getFile();
-                System.out.println("File: " + i + "/" + files.size());
+                FileProperties fileP = files.get(i);
+                n++;
+                System.out.println("File: " + n);
                 try {
                     BufferedImage first = null;
                     if(isImage)
-                        first = ImageIO.read(file);
+                        first = ImageIO.read(fileP.getFile());
                     if(first != null || !isImage) {
                         if (!files.get(i).getSeen() && !files.get(i).getToDelete()) {
                             List<File> toDelete = new ArrayList<>();
-                            toDelete.add(file);
+                            toDelete.add(fileP.getFile());
                             for (int j = i + 1; j < files.size(); j++) {
-                                System.out.println("File " + i + ": " + j + "/" + files.size());
-                                File secondFile = files.get(j).getFile();
+                                System.out.println("File " + n + ": " + j + "/" + files.size());
+                                FileProperties secondFileP = files.get(j);
                                 if (!files.get(j).getSeen() && !files.get(j).getToDelete()) {
+                                    boolean cantCompare = false;
+                                    if (fileP.getDate()!=null && secondFileP.getDate()!=null)
+                                        if(TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getTime()-secondFileP.getDate().getTime()), TimeUnit.MILLISECONDS)>1) {
+                                            cantCompare = true;
+                                            System.out.println("yeeeeeeeeeeeei");
+                                        }
                                     if (isImage) {
-                                        if(Math.abs(files.get(i).getProportion()-files.get(j).getProportion())<=0.02f) {
-                                            if (isDuplicatedImage(first, ImageIO.read(secondFile), percentage)) {
-                                                toDelete.add(secondFile);
+                                        if(Math.abs(files.get(i).getProportion()-files.get(j).getProportion())<=0.02f && !cantCompare) {
+                                            if (isDuplicatedImage(first, ImageIO.read(secondFileP.getFile()), percentage)) {
+                                                toDelete.add(secondFileP.getFile());
                                                 files.get(j).setSeen(true);
                                             }
                                         }
                                     } else {
-                                        if (isDuplicatedVideo(file, secondFile)) {
-                                            toDelete.add(secondFile);
-                                            files.get(j).setSeen(true);
-                                        }
+                                        if(!cantCompare)
+                                            if (isDuplicatedVideo(fileP.getFile(), secondFileP.getFile())) {
+                                                toDelete.add(secondFileP.getFile());
+                                                files.get(j).setSeen(true);
+                                            }
                                     }
                                 }
                             }
@@ -230,6 +245,19 @@ public class Main {
                 } catch (IOException ignored) { }
             }
             deleteFiles(files);
+        }
+    }
+
+    private static Date getExifDate(File file) {
+        try {
+            Metadata metadata = ImageMetadataReader.readMetadata(file);
+            ExifSubIFDDirectory directory = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
+            if (directory != null)
+                return directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
+            else
+                return null;
+        } catch (ImageProcessingException | IOException ex) {
+            return null;
         }
     }
 
@@ -339,12 +367,14 @@ class FileProperties{
     private boolean seen;
     private File file;
     private float proportion;
+    private Date date;
 
-    public FileProperties(File file,boolean toDelete, boolean seen, float proportion){
+    public FileProperties(File file,boolean toDelete, boolean seen, float proportion, Date date){
         this.seen = seen;
         this.toDelete = toDelete;
         this.file=file;
         this.proportion = proportion;
+        this.date=date;
     }
 
     public boolean getToDelete(){
@@ -369,6 +399,10 @@ class FileProperties{
 
     public float getProportion(){
         return proportion;
+    }
+
+    public Date getDate(){
+        return date;
     }
 }
 
