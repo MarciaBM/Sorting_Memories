@@ -172,7 +172,8 @@ public class Main {
         }
         int percentage=getPercentage(in);
         deleteDuplicatedFiles(in,images.values().iterator(),true,percentage);
-        deleteDuplicatedFiles(in,videos.values().iterator(),false,percentage);
+        if(!System.getProperty("os.name").toLowerCase().contains("win"))
+            deleteDuplicatedFiles(in,videos.values().iterator(),false,percentage);
     }
 
     public static Dimension getImageDimension(File imgFile){
