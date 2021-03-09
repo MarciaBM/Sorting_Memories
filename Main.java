@@ -2,6 +2,9 @@ import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
+import com.drew.tools.FileUtil;
+import org.opencv.core.Algorithm;
+import org.opencv.img_hash.AverageHash;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -13,6 +16,11 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.lang.reflect.Array;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -21,10 +29,10 @@ public class Main {
 
     private static final int PANEL_HEIGHT = 600;
 
-    private static String getMimeType(File f)  {
+    private static String getMimeType(File f) {
         try {
             String mimetype = Files.probeContentType(f.toPath());
-            if(mimetype == null)
+            if (mimetype == null)
                 return "";
             return (mimetype.split("/")[0]);
         } catch (IOException e) {
@@ -38,20 +46,20 @@ public class Main {
                 first = resizeImage(first, second.getWidth(), second.getHeight());
             else if (first.getHeight() < second.getHeight())
                 second = resizeImage(second, first.getWidth(), first.getHeight());
-            else if(first.getWidth() > second.getWidth())
+            else if (first.getWidth() > second.getWidth())
                 first = resizeImage(first, second.getWidth(), second.getHeight());
             else if (first.getWidth() < second.getWidth())
                 second = resizeImage(second, first.getWidth(), first.getHeight());
 
-            return getPhotoPercentage(first,second) >= userPercentage;
+            return getPhotoPercentage(first, second) >= userPercentage;
         } catch (IOException e) {
             return false;
         }
     }
 
     private static boolean isDuplicatedVideo(File current, File secondFile) {
-        String mimeType1=getMimeType(current), mimeType2=getMimeType(secondFile);
-        if(!mimeType1.equals(mimeType2))
+        String mimeType1 = getMimeType(current), mimeType2 = getMimeType(secondFile);
+        if (!mimeType1.equals(mimeType2))
             return false;
         try {
             ProcessBuilder processBuilder = new ProcessBuilder();
@@ -71,7 +79,7 @@ public class Main {
     }
 
     //code by geeksforgeeks.org
-    private static double getPhotoPercentage(BufferedImage first,BufferedImage second){
+    private static double getPhotoPercentage(BufferedImage first, BufferedImage second) {
         int width1 = first.getWidth();
         int height1 = first.getHeight();
 
@@ -98,12 +106,12 @@ public class Main {
 
         double percentage = (avg_different_pixels /
                 255) * 100;
-        return 100-percentage;
+        return 100 - percentage;
     }
 
     private static int deleteEmptyFolders(File folder, int counter) {
         if (folder.isDirectory()) {
-            if(folder.listFiles().length > 0) {
+            if (folder.listFiles().length > 0) {
                 File[] folders = folder.listFiles();
                 for (File insideFolder : folders) {
                     counter = deleteEmptyFolders(insideFolder, counter);
@@ -118,49 +126,49 @@ public class Main {
     }
 
     private static Iterator<File> getFile(File file, List<File> recursiveFileList) {
-        if(file.isFile()) {
+        if (file.isFile()) {
             recursiveFileList.add(file);
-        }else{
-            for(File f:file.listFiles())
-                getFile(f,recursiveFileList);
+        } else {
+            for (File f : file.listFiles())
+                getFile(f, recursiveFileList);
         }
         return recursiveFileList.iterator();
     }
 
-    private static Map<Float, List<FileProperties>> populateMapsWithAspectRatio(){
+    private static Map<Float, List<FileProperties>> populateMapsWithAspectRatio() {
         Map<Float, List<FileProperties>> images = new HashMap<>();
-        images.put((float)16/9, new ArrayList<>());
-        images.put((float)9/16, new ArrayList<>());
-        images.put((float)4/3, new ArrayList<>());
-        images.put((float)3/4, new ArrayList<>());
-        images.put((float)3/2,new ArrayList<>());
-        images.put((float)2/3,new ArrayList<>());
-        images.put(0.6f,new ArrayList<>());
+        images.put((float) 16 / 9, new ArrayList<>());
+        images.put((float) 9 / 16, new ArrayList<>());
+        images.put((float) 4 / 3, new ArrayList<>());
+        images.put((float) 3 / 4, new ArrayList<>());
+        images.put((float) 3 / 2, new ArrayList<>());
+        images.put((float) 2 / 3, new ArrayList<>());
+        images.put(0.6f, new ArrayList<>());
         images.put(1.00f, new ArrayList<>());
         images.put(-1.00f, new ArrayList<>());
         return images;
     }
 
-    private static List<Integer> printStages(Scanner in, Iterator<List<FileProperties>> images, int sumVideos){
+    private static List<Integer> printStages(Scanner in, Iterator<List<FileProperties>> images, int sumVideos) {
         System.out.println("Images:");
-        int n = 1, sum=0;
-        while(images.hasNext()) {
-            int size=images.next().size();
+        int n = 1, sum = 0;
+        while (images.hasNext()) {
+            int size = images.next().size();
             System.out.println("Stage " + n + ": " + size + " files.");
             n++;
-            sum+=size;
+            sum += size;
         }
         System.out.println("Total images: " + sum);
         System.out.println("Total videos and others: " + sumVideos + "\n");
         System.out.println("Which images stages do you want to run? (Separate numbers with spaces or 'A' to run all of them):");
 
-        while(true) {
+        while (true) {
             String choice = in.nextLine().trim();
-            if (choice.matches("[1-9 ]+|A")){
+            if (choice.matches("[1-9 ]+|A")) {
                 List<Integer> result = new ArrayList<>();
-                if(choice.equals("A"))
+                if (choice.equals("A"))
                     result.add(-1);
-                else{
+                else {
                     String[] answer = choice.split(" ");
                     for (String s : answer) result.add(Integer.parseInt(s));
                 }
@@ -169,45 +177,47 @@ public class Main {
         }
     }
 
-    private static void getMaps(Scanner in,File folder){
+    private static void getMaps(Scanner in, File folder) {
         Map<Float, List<FileProperties>> images = populateMapsWithAspectRatio();
         Map<Long, List<FileProperties>> videos = new HashMap<>();
-        int sumVideos=0;
+
+
+        int sumVideos = 0;
         System.out.println("Loading files...");
-        for(File f:folder.listFiles()) {
+        for (File f : folder.listFiles()) {
             Iterator<File> it = getFile(f, new ArrayList<>());
             while (it.hasNext()) {
-                File file=it.next();
-                if(getMimeType(file).equals("image")) {
+                File file = it.next();
+                if (getMimeType(file).equals("image")) {
                     Dimension d = getImageDimension(file);
-                    if(d!=null){
-                        float proportion = (float)d.height/(float)d.width, valueInMap = -1.00f;
+                    if (d != null) {
+                        float proportion = (float) d.height / (float) d.width, valueInMap = -1.00f;
                         final float marginProportion = 0.02f;
                         Set<Float> aspectRatios = images.keySet();
 
                         for (float aR : aspectRatios)
-                            if(Math.abs(proportion-aR)<=marginProportion)
+                            if (Math.abs(proportion - aR) <= marginProportion)
                                 valueInMap = aR;
 
-                        images.get(valueInMap).add(new FileProperties(file, false, false,d,getExifDate(file)));
+                        images.get(valueInMap).add(new FileProperties(file, false, false, d, getExifDate(file)));
                     }
-                }else if(!getMimeType(file).equals("")){
+                } else if (!getMimeType(file).equals("")) {
                     sumVideos++;
-                    long size=file.length();
-                    if(!videos.containsKey(size))
-                        videos.put(size,new ArrayList<>());
-                    videos.get(size).add(new FileProperties(file,false,false,null,getExifDate(file)));
+                    long size = file.length();
+                    if (!videos.containsKey(size))
+                        videos.put(size, new ArrayList<>());
+                    videos.get(size).add(new FileProperties(file, false, false, null, getExifDate(file)));
                 }
             }
         }
-        List<Integer> result=printStages(in,images.values().iterator(),sumVideos);
-        int percentage=getPercentage(in);
-        deleteDuplicatedFiles(in,images.values().iterator(),result,true,percentage);
-        if(!System.getProperty("os.name").toLowerCase().contains("win"))
-            deleteDuplicatedFiles(in,videos.values().iterator(),result,false,percentage);
+        List<Integer> result = printStages(in, images.values().iterator(), sumVideos);
+        int percentage = getPercentage(in);
+        deleteDuplicatedFiles(in, images.values().iterator(), result, true, percentage);
+        if (!System.getProperty("os.name").toLowerCase().contains("win"))
+            deleteDuplicatedFiles(in, videos.values().iterator(), result, false, percentage);
     }
 
-    public static Dimension getImageDimension(File imgFile){
+    public static Dimension getImageDimension(File imgFile) {
         int pos = imgFile.getName().lastIndexOf(".");
         try {
             if (pos == -1)
@@ -229,12 +239,12 @@ public class Main {
         return null;
     }
 
-    private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator, List<Integer> stages,boolean isImage,int percentage){
-        int n = 0, stage=0;
-        while(iterator.hasNext()){
+    private static void deleteDuplicatedFiles(Scanner in, Iterator<List<FileProperties>> iterator, List<Integer> stages, boolean isImage, int percentage) {
+        int n = 0, stage = 0;
+        while (iterator.hasNext()) {
             stage++;
             List<FileProperties> files = iterator.next();
-            if(stages.contains(stage) || stages.contains(-1) || !isImage) {
+            if (stages.contains(stage) || stages.contains(-1) || !isImage) {
                 System.out.println("Stage " + stage + ":");
                 for (int i = 0; i < files.size() - 1; i++) {
                     FileProperties fileP = files.get(i);
@@ -254,7 +264,7 @@ public class Main {
                                     if (!files.get(j).getSeen() && !files.get(j).getToDelete()) {
                                         boolean cantCompare = false;
                                         if (fileP.getDate() != null && secondFileP.getDate() != null)
-                                            if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getTime() - secondFileP.getDate().getTime()), TimeUnit.MILLISECONDS) > 1) {
+                                            if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getNano() - secondFileP.getDate().getNano()), TimeUnit.NANOSECONDS) > 1) {
                                                 cantCompare = true;
                                                 System.out.println("yeeeeeeeeeeeei");
                                             }
@@ -285,41 +295,43 @@ public class Main {
         }
     }
 
-    private static Date getExifDate(File file) {
+    private static LocalDateTime getExifDate(File file) {
         try {
             Metadata metadata = ImageMetadataReader.readMetadata(file);
             ExifSubIFDDirectory directory = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
-            if (directory != null)
-                return directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
-            else
+            if (directory != null) {
+                Date dateTemp = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
+                return dateTemp != null ? Instant.ofEpochMilli(dateTemp.getTime()).atZone(ZoneId.systemDefault()).toLocalDateTime() : null;
+            } else {
                 return null;
+            }
         } catch (ImageProcessingException | IOException ex) {
             return null;
         }
     }
 
-    private static int getPercentage(Scanner in){
+    private static int getPercentage(Scanner in) {
         System.out.println("Enter the equality percentage to compare the photos:");
-        while(true) {
+        while (true) {
             String answer = in.nextLine().trim();
-            if(answer.matches("[0-9]+")){
+            if (answer.matches("[0-9]+")) {
                 int percentage = Integer.parseInt(answer);
-                if(percentage >=0 && percentage <=100)
+                if (percentage >= 0 && percentage <= 100)
                     return percentage;
             }
         }
     }
 
-    private static void getPicture(FileProperties file){
-        int width = (int)(file.getDimension().getWidth()*PANEL_HEIGHT/file.getDimension().getHeight());
+    private static void getPicture(FileProperties file) {
+        int width = (int) (file.getDimension().getWidth() * PANEL_HEIGHT / file.getDimension().getHeight());
         Image image = new ImageIcon(file.getFile().getAbsolutePath()).getImage();
         JPanel jPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                g.drawImage(image, 0, 0, width, PANEL_HEIGHT,this);
+                g.drawImage(image, 0, 0, width, PANEL_HEIGHT, this);
             }
-        };;
+        };
         JFrame f = new JFrame();
         f.setSize(new Dimension(width, PANEL_HEIGHT));
         f.setTitle(file.getFile().getAbsolutePath());
@@ -327,19 +339,19 @@ public class Main {
         f.setVisible(true);
     }
 
-    private static void chooseToDelete(Scanner in,List<FileProperties> toDelete, List<FileProperties> files, boolean isImage){
+    private static void chooseToDelete(Scanner in, List<FileProperties> toDelete, List<FileProperties> files, boolean isImage) {
         if (toDelete.size() > 1) {
             System.out.println("Duplicated files have been found, please choose the ones you want to delete (separate them with space):");
             for (int m = 0; m < toDelete.size(); m++) {
                 int aux = m + 1;
                 System.out.println(aux + ": " + toDelete.get(m).getFile().getAbsolutePath());
-                if(isImage)
+                if (isImage)
                     getPicture(toDelete.get(m));
             }
             System.out.println("E: Keep them all");
             //user
-            boolean accepted=false;
-            while(!accepted){
+            boolean accepted = false;
+            while (!accepted) {
                 String answer = in.nextLine().trim();
                 if (answer.matches("[0-9 ]+|E")) {
                     accepted = true;
@@ -347,11 +359,11 @@ public class Main {
                         String[] numbers = answer.split(" ");
                         for (String s : numbers) {
                             int index = Integer.parseInt(s) - 1;
-                            if(index>=files.size() || index <0){
-                                accepted=false;
+                            if (index >= files.size() || index < 0) {
+                                accepted = false;
                                 break;
                             }
-                            files.get(getIndex(files,toDelete.get(index).getFile())).setToDelete(true);
+                            files.get(getIndex(files, toDelete.get(index).getFile())).setToDelete(true);
                         }
                     }
                 }
@@ -359,23 +371,23 @@ public class Main {
         }
     }
 
-    private static int getIndex(List<FileProperties> files,File file){
-        for(int i = 0;i<files.size();i++){
-            if(files.get(i).getFile()==file)
+    private static int getIndex(List<FileProperties> files, File file) {
+        for (int i = 0; i < files.size(); i++) {
+            if (files.get(i).getFile() == file)
                 return i;
         }
         return 0;
     }
 
-    private static void deleteFiles(List<FileProperties> files){
+    private static void deleteFiles(List<FileProperties> files) {
         boolean found = false;
         for (FileProperties key : files) {
             if (key.getToDelete()) {
                 key.getFile().delete();
-                found=true;
+                found = true;
             }
         }
-        if(!found)
+        if (!found)
             System.out.println("There aren't any duplicated files");
     }
 
@@ -388,25 +400,75 @@ public class Main {
         return resizedImage;
     }
 
-    public static void organizeFiles(){}
+
+    public static void organizeFiles(Scanner in, File folder) throws IOException {
+
+        // TODO -> Melhorar código :)
+        // TODO -> Armazenar os ficheiros todos num mapa primeiro com a path antiga e a path nova, para que assim quando o script corra mais que uma vez nao haja sobreposiçao de pastas ex/2015/2015/2015
+        // TODO -> Ver porque é que ha ficheiros com data que foi tirada e n é colocada nas pastas
+
+        String opt = "";
+        System.out.println("Do you want to organize yourself(Y) or automatically(A)");
+
+        while (!opt.equalsIgnoreCase("y") && !opt.equalsIgnoreCase("a"))
+            opt = in.nextLine();
+
+        boolean auto = opt.equalsIgnoreCase("a");
+
+        for (File f : folder.listFiles()) {
+            Iterator<File> it = getFile(f, new ArrayList<>());
+            while (it.hasNext()) {
+                File file = it.next();
+                if (getMimeType(file).equals("image")) {
+                    Dimension d = getImageDimension(file);
+                    if (d != null) {
+                        if (!auto) {
+                            getPicture(new FileProperties(file, false, false, d, null));
+                            System.out.println("Do you want organize this photo ['" + file.getAbsolutePath() + "'] ? (y/n)");
+                            opt = in.nextLine();
+                        } else {
+                            System.out.println("Organizing files automatically...");
+                        }
+                        if (opt.equalsIgnoreCase("y") || auto) {
+                            LocalDateTime ldTOfFile = getExifDate(file);
+                            String[] pathFile = file.getPath().split(folder.getName()); // file path splitted
+                            Path finalPath = null;
+
+                            if (ldTOfFile != null)
+                                finalPath = getConcatenatedPath(pathFile, folder.getName(), String.valueOf(ldTOfFile.getYear()));
+                            else
+                                finalPath = getConcatenatedPath(pathFile, folder.getName(), "Unknown date");
+
+                            new File(finalPath.toString().split(file.getName())[0]).mkdirs();
+                            file.renameTo(new File(finalPath.toString()));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static Path getConcatenatedPath(String[] pathFile, String folderName, String middleName) {
+        return Paths.get(pathFile[0] + folderName + "\\" + middleName + "\\" + pathFile[1]);
+    }
 
     public static void main(String[] args) {
 
         try {
             Scanner in = new Scanner(System.in);
-            if(args.length == 0)
+            if (args.length == 0)
                 throw new ScriptException("Please insert a directory");
-            if(args.length > 1)
+            if (args.length > 1)
                 throw new ScriptException("Upss too many arguments!");
 
             String directory = args[0];
             File folder = new File(directory);
 
-            if(!folder.isDirectory())
+            if (!folder.isDirectory())
                 throw new ScriptException("Please insert a folder's directory");
 
-            String command ="";
-            while(!command.equals("E")){
+            String command = "";
+            while (!command.equals("E")) {
                 System.out.println("Choose what you want to do:");
                 System.out.println("[1] - Delete empty folders");
                 System.out.println("[2] - Delete duplicated files");
@@ -422,7 +484,10 @@ public class Main {
                         getMaps(in, folder);
                         break;
                     case "3":
-                        organizeFiles();
+                        folder = new File(directory);
+                        organizeFiles(in, folder);
+                        deleteEmptyFolders(folder, 0);
+
                         break;
                     case "E":
                         System.out.println("Hope you come back :)");
@@ -432,62 +497,62 @@ public class Main {
                 }
             }
 
-        } catch (ScriptException e) {
+        } catch (ScriptException | IOException e) {
             System.out.println(e.getMessage());
         }
     }
 }
 
-class FileProperties{
+class FileProperties {
     private boolean toDelete;
     private boolean seen;
     private File file;
     private Dimension dimension;
-    private Date date;
+    private LocalDateTime date;
 
-    public FileProperties(File file,boolean toDelete, boolean seen, Dimension dimension, Date date){
+    public FileProperties(File file, boolean toDelete, boolean seen, Dimension dimension, LocalDateTime date) {
         this.seen = seen;
         this.toDelete = toDelete;
-        this.file=file;
-        this.dimension=dimension;
-        this.date=date;
+        this.file = file;
+        this.dimension = dimension;
+        this.date = date;
     }
 
-    public boolean getToDelete(){
+    public boolean getToDelete() {
         return toDelete;
     }
 
-    public boolean getSeen(){
+    public boolean getSeen() {
         return seen;
     }
 
-    public void setToDelete(boolean toDelete){
+    public void setToDelete(boolean toDelete) {
         this.toDelete = toDelete;
     }
 
-    public void setSeen(boolean seen){
+    public void setSeen(boolean seen) {
         this.seen = seen;
     }
 
-    public File getFile(){
+    public File getFile() {
         return file;
     }
 
-    public float getProportion(){
-        return (float)dimension.height/(float)dimension.width;
+    public float getProportion() {
+        return (float) dimension.height / (float) dimension.width;
     }
 
-    public Dimension getDimension(){
+    public Dimension getDimension() {
         return dimension;
     }
 
-    public Date getDate(){
+    public LocalDateTime getDate() {
         return date;
     }
 }
 
-class ScriptException extends Exception{
-    public ScriptException(String message){
+class ScriptException extends Exception {
+    public ScriptException(String message) {
         super(message);
     }
 }
