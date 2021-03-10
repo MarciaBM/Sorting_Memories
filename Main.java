@@ -149,7 +149,6 @@ public class Main {
             lib=new File("libopencv_java451.so");
 
         System.load(lib.getAbsolutePath());
-        ImgHashBase alg = AverageHash.create();
 
         Map<Float, List<FileProperties>> images = populateMapsWithAspectRatio();
         Map<Long, List<FileProperties>> videos = new HashMap<>();
@@ -182,9 +181,9 @@ public class Main {
         }
         List<Integer> result=printStages(in,images.values().iterator(),sumVideos);
         int percentage=getPercentage(in);
-        deleteDuplicatedFiles(in,images.values().iterator(),result,true,percentage,alg);
+        deleteDuplicatedFiles(in,images.values().iterator(),result,true,percentage);
         if(!System.getProperty("os.name").toLowerCase().contains("win"))
-            deleteDuplicatedFiles(in,videos.values().iterator(),result,false,percentage,alg);
+            deleteDuplicatedFiles(in,videos.values().iterator(),result,false,percentage);
     }
 
     public static Dimension getImageDimension(File imgFile){
@@ -218,7 +217,8 @@ public class Main {
         }
     }
 
-    private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator, List<Integer> stages,boolean isImage,int percentage, ImgHashBase ihb){
+    private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator, List<Integer> stages,boolean isImage,int percentage){
+        ImgHashBase ihb = AverageHash.create();
         int n = 0, stage=0;
         Mat matrix1, matrix2, hash1 = new Mat(), hash2 = new Mat();
         FileProperties fileP, secondFileP;
