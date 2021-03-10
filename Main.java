@@ -2,16 +2,18 @@ import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
-
+import org.opencv.core.CvException;
+import org.opencv.core.Mat;
+import org.opencv.img_hash.AverageHash;
+import org.opencv.img_hash.ImgHashBase;
+import org.opencv.imgcodecs.Imgcodecs;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.ImageInputStream;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.io.*;
-import java.lang.reflect.Array;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.List;
@@ -20,6 +22,16 @@ import java.util.concurrent.TimeUnit;
 public class Main {
 
     private static final int PANEL_HEIGHT = 600;
+    private static final float PROPORTION_MARGIN=0.02f;
+    private static final float AR16_9 = (float)16/9;
+    private static final float AR9_16 = (float)9/16;
+    private static final float AR4_3 = (float)4/3;
+    private static final float AR3_4 = (float)3/4;
+    private static final float AR3_2 = (float)3/2;
+    private static final float AR2_3 = (float)2/3;
+    private static final float AR1_1 = 1.0f;
+    private static final float AR_OTHER = -1.0f;
+    private static final float AR6_10 = 0.6f;
 
     private static String getMimeType(File f)  {
         try {
@@ -29,23 +41,6 @@ public class Main {
             return (mimetype.split("/")[0]);
         } catch (IOException e) {
             return "";
-        }
-    }
-
-    private static boolean isDuplicatedImage(BufferedImage first, BufferedImage second, int userPercentage) {
-        try {
-            if (first.getHeight() > second.getHeight())
-                first = resizeImage(first, second.getWidth(), second.getHeight());
-            else if (first.getHeight() < second.getHeight())
-                second = resizeImage(second, first.getWidth(), first.getHeight());
-            else if(first.getWidth() > second.getWidth())
-                first = resizeImage(first, second.getWidth(), second.getHeight());
-            else if (first.getWidth() < second.getWidth())
-                second = resizeImage(second, first.getWidth(), first.getHeight());
-
-            return getPhotoPercentage(first,second) >= userPercentage;
-        } catch (IOException e) {
-            return false;
         }
     }
 
@@ -68,37 +63,6 @@ public class Main {
         } catch (IOException e) {
             return false;
         }
-    }
-
-    //code by geeksforgeeks.org
-    private static double getPhotoPercentage(BufferedImage first,BufferedImage second){
-        int width1 = first.getWidth();
-        int height1 = first.getHeight();
-
-        long difference = 0;
-        for (int y = 0; y < height1; y++) {
-            for (int x = 0; x < width1; x++) {
-                int rgbA = first.getRGB(x, y);
-                int rgbB = second.getRGB(x, y);
-                int redA = (rgbA >> 16) & 0xff;
-                int greenA = (rgbA >> 8) & 0xff;
-                int blueA = (rgbA) & 0xff;
-                int redB = (rgbB >> 16) & 0xff;
-                int greenB = (rgbB >> 8) & 0xff;
-                int blueB = (rgbB) & 0xff;
-                difference += Math.abs(redA - redB);
-                difference += Math.abs(greenA - greenB);
-                difference += Math.abs(blueA - blueB);
-            }
-        }
-
-        double total_pixels = width1 * height1 * 3;
-        double avg_different_pixels = difference /
-                total_pixels;
-
-        double percentage = (avg_different_pixels /
-                255) * 100;
-        return 100-percentage;
     }
 
     private static int deleteEmptyFolders(File folder, int counter) {
@@ -129,15 +93,15 @@ public class Main {
 
     private static Map<Float, List<FileProperties>> populateMapsWithAspectRatio(){
         Map<Float, List<FileProperties>> images = new HashMap<>();
-        images.put((float)16/9, new ArrayList<>());
-        images.put((float)9/16, new ArrayList<>());
-        images.put((float)4/3, new ArrayList<>());
-        images.put((float)3/4, new ArrayList<>());
-        images.put((float)3/2,new ArrayList<>());
-        images.put((float)2/3,new ArrayList<>());
-        images.put(0.6f,new ArrayList<>());
-        images.put(1.00f, new ArrayList<>());
-        images.put(-1.00f, new ArrayList<>());
+        images.put(AR16_9, new ArrayList<>());
+        images.put(AR9_16, new ArrayList<>());
+        images.put(AR4_3, new ArrayList<>());
+        images.put(AR3_4, new ArrayList<>());
+        images.put(AR3_2,new ArrayList<>());
+        images.put(AR2_3,new ArrayList<>());
+        images.put(AR6_10,new ArrayList<>());
+        images.put(AR1_1, new ArrayList<>());
+        images.put(AR_OTHER, new ArrayList<>());
         return images;
     }
 
@@ -170,8 +134,20 @@ public class Main {
     }
 
     private static void getMaps(Scanner in,File folder){
+        File lib = null;
+        if(System.getProperty("os.name").toLowerCase().contains("win"))
+            lib=new File("/src/opencv_videoio_ffmpeg451_64.dll");
+        else if(System.getProperty("os.name").toLowerCase().contains("mac"))
+            System.out.println("Library unavailable, sorry.");
+        else
+            lib=new File("/src/libopencv_java451.so");
+
+        System.load(lib.getAbsolutePath());
+        ImgHashBase alg = AverageHash.create();
+
         Map<Float, List<FileProperties>> images = populateMapsWithAspectRatio();
         Map<Long, List<FileProperties>> videos = new HashMap<>();
+
         int sumVideos=0;
         System.out.println("Loading files...");
         for(File f:folder.listFiles()) {
@@ -180,16 +156,14 @@ public class Main {
                 File file=it.next();
                 if(getMimeType(file).equals("image")) {
                     Dimension d = getImageDimension(file);
-                    if(d!=null){
-                        float proportion = (float)d.height/(float)d.width, valueInMap = -1.00f;
-                        final float marginProportion = 0.02f;
+                    if(d!=null) {
+                        float proportion = (float) d.height / (float) d.width, valueInMap = AR_OTHER;
                         Set<Float> aspectRatios = images.keySet();
-
                         for (float aR : aspectRatios)
-                            if(Math.abs(proportion-aR)<=marginProportion)
+                            if (Math.abs(proportion - aR) <= PROPORTION_MARGIN)
                                 valueInMap = aR;
 
-                        images.get(valueInMap).add(new FileProperties(file, false, false,d,getExifDate(file)));
+                        images.get(valueInMap).add(new FileProperties(file, false, false, d, getExifDate(file)));
                     }
                 }else if(!getMimeType(file).equals("")){
                     sumVideos++;
@@ -202,16 +176,16 @@ public class Main {
         }
         List<Integer> result=printStages(in,images.values().iterator(),sumVideos);
         int percentage=getPercentage(in);
-        deleteDuplicatedFiles(in,images.values().iterator(),result,true,percentage);
+        deleteDuplicatedFiles(in,images.values().iterator(),result,true,percentage,alg);
         if(!System.getProperty("os.name").toLowerCase().contains("win"))
-            deleteDuplicatedFiles(in,videos.values().iterator(),result,false,percentage);
+            deleteDuplicatedFiles(in,videos.values().iterator(),result,false,percentage,alg);
     }
 
     public static Dimension getImageDimension(File imgFile){
         int pos = imgFile.getName().lastIndexOf(".");
         try {
             if (pos == -1)
-                throw new IOException("No extension for file: " + imgFile.getAbsolutePath());
+                return null;
             String suffix = imgFile.getName().substring(pos + 1);
             Iterator<ImageReader> iter = ImageIO.getImageReadersBySuffix(suffix);
             if (iter.hasNext()) {
@@ -229,56 +203,70 @@ public class Main {
         return null;
     }
 
-    private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator, List<Integer> stages,boolean isImage,int percentage){
+    private static Mat getHash (ImgHashBase ihb,Mat mat, Mat hash){
+        try {
+            ihb.compute(mat,hash);
+            return hash;
+        } catch (CvException e){
+            return null;
+        }
+    }
+
+    private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator, List<Integer> stages,boolean isImage,int percentage, ImgHashBase ihb){
         int n = 0, stage=0;
+        Mat matrix1, matrix2, hash1 = new Mat(), hash2 = new Mat();
+        FileProperties fileP, secondFileP;
+        List<FileProperties> toDelete = new ArrayList<>();
+
         while(iterator.hasNext()){
             stage++;
             List<FileProperties> files = iterator.next();
             if(stages.contains(stage) || stages.contains(-1) || !isImage) {
                 System.out.println("Stage " + stage + ":");
                 for (int i = 0; i < files.size() - 1; i++) {
-                    FileProperties fileP = files.get(i);
+                    fileP = files.get(i);
                     n++;
                     System.out.println("File: " + n);
-                    try {
-                        BufferedImage first = null;
-                        if (isImage)
-                            first = ImageIO.read(fileP.getFile());
-                        if (first != null || !isImage) {
-                            if (!files.get(i).getSeen() && !files.get(i).getToDelete()) {
-                                List<FileProperties> toDelete = new ArrayList<>();
+                        if (!files.get(i).getSeen() && !files.get(i).getToDelete()) {
+                            if(isImage) {
+                                matrix1 = Imgcodecs.imread(fileP.getFile().getAbsolutePath());
+                                hash1 = getHash(ihb,matrix1,hash1);
+                            }
+                            if(!isImage || hash1!=null) {
+                                toDelete.clear();
                                 toDelete.add(fileP);
                                 for (int j = i + 1; j < files.size(); j++) {
                                     System.out.println("File " + n + ": " + j + "/" + files.size());
-                                    FileProperties secondFileP = files.get(j);
+                                    secondFileP = files.get(j);
                                     if (!files.get(j).getSeen() && !files.get(j).getToDelete()) {
                                         boolean cantCompare = false;
                                         if (fileP.getDate() != null && secondFileP.getDate() != null)
-                                            if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getTime() - secondFileP.getDate().getTime()), TimeUnit.MILLISECONDS) > 1) {
+                                            if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getTime() - secondFileP.getDate().getTime()), TimeUnit.MILLISECONDS) > 1)
                                                 cantCompare = true;
-                                                System.out.println("yeeeeeeeeeeeei");
-                                            }
                                         if (isImage) {
-                                            if (Math.abs(files.get(i).getProportion() - files.get(j).getProportion()) <= 0.02f && !cantCompare) {
-                                                if (isDuplicatedImage(first, ImageIO.read(secondFileP.getFile()), percentage)) {
-                                                    toDelete.add(secondFileP);
-                                                    files.get(j).setSeen(true);
+                                            if (Math.abs(fileP.getProportion() - secondFileP.getProportion()) <= 0.02f && !cantCompare) {
+                                                matrix2 = Imgcodecs.imread(secondFileP.getFile().getAbsolutePath());
+                                                hash2 = getHash(ihb,matrix2,hash2);
+                                                if(hash2!=null) {
+                                                    if (100.0 - (ihb.compare(hash1, hash2) * 100.0 / 64.0) >= percentage) {
+                                                        toDelete.add(secondFileP);
+                                                        secondFileP.setSeen(true);
+                                                    }
                                                 }
                                             }
                                         } else {
                                             if (!cantCompare)
                                                 if (isDuplicatedVideo(fileP.getFile(), secondFileP.getFile())) {
                                                     toDelete.add(secondFileP);
-                                                    files.get(j).setSeen(true);
+                                                    secondFileP.setSeen(true);
                                                 }
                                         }
                                     }
+                                    System.gc();
                                 }
                                 chooseToDelete(in, toDelete, files, isImage);
                             }
                         }
-                    } catch (IOException ignored) {
-                    }
                 }
                 deleteFiles(files);
             }
@@ -319,7 +307,7 @@ public class Main {
                 super.paintComponent(g);
                 g.drawImage(image, 0, 0, width, PANEL_HEIGHT,this);
             }
-        };;
+        };
         JFrame f = new JFrame();
         f.setSize(new Dimension(width, PANEL_HEIGHT));
         f.setTitle(file.getFile().getAbsolutePath());
@@ -379,15 +367,6 @@ public class Main {
             System.out.println("There aren't any duplicated files");
     }
 
-    public static BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight) throws IOException {
-        BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
-        Graphics2D graphics2D = resizedImage.createGraphics();
-        graphics2D.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        graphics2D.drawImage(originalImage, 0, 0, targetWidth, targetHeight, null);
-        graphics2D.dispose();
-        return resizedImage;
-    }
-
     public static void organizeFiles(){}
 
     public static void main(String[] args) {
@@ -396,8 +375,8 @@ public class Main {
             Scanner in = new Scanner(System.in);
             if(args.length == 0)
                 throw new ScriptException("Please insert a directory");
-            if(args.length > 1)
-                throw new ScriptException("Upss too many arguments!");
+//            if(args.length > 1)
+//                throw new ScriptException("Upss too many arguments!");
 
             String directory = args[0];
             File folder = new File(directory);
@@ -411,6 +390,7 @@ public class Main {
                 System.out.println("[1] - Delete empty folders");
                 System.out.println("[2] - Delete duplicated files");
                 System.out.println("[3] - Organize files by year");
+                System.out.println("[E] - Exit");
                 command = in.next();
 
                 switch (command) {
