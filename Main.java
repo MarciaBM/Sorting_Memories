@@ -2,9 +2,6 @@ import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
-import com.drew.tools.FileUtil;
-import org.opencv.core.Algorithm;
-import org.opencv.img_hash.AverageHash;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -24,6 +21,7 @@ import java.time.ZoneId;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.PatternSyntaxException;
 
 public class Main {
 
@@ -403,10 +401,6 @@ public class Main {
 
     public static void organizeFiles(Scanner in, File folder) throws IOException {
 
-        // TODO -> Melhorar código :)
-        // TODO -> Armazenar os ficheiros todos num mapa primeiro com a path antiga e a path nova, para que assim quando o script corra mais que uma vez nao haja sobreposiçao de pastas ex/2015/2015/2015
-        // TODO -> Ver porque é que ha ficheiros com data que foi tirada e n é colocada nas pastas
-
         String opt = "";
         System.out.println("Do you want to organize yourself(Y) or automatically(A)");
 
@@ -419,37 +413,62 @@ public class Main {
             Iterator<File> it = getFile(f, new ArrayList<>());
             while (it.hasNext()) {
                 File file = it.next();
-                if (getMimeType(file).equals("image")) {
-                    Dimension d = getImageDimension(file);
-                    if (d != null) {
                         if (!auto) {
-                            getPicture(new FileProperties(file, false, false, d, null));
-                            System.out.println("Do you want organize this photo ['" + file.getAbsolutePath() + "'] ? (y/n)");
+                            if(getMimeType(file).equals("image")){
+                                Dimension d = getImageDimension(file);
+                                if( d != null)
+                                    getPicture(new FileProperties(file, false, false, d, null));
+                            }
+                             System.out.println("Do you want organize this photo ['" + file.getAbsolutePath() + "'] ? (y/n)");
                             opt = in.nextLine();
                         } else {
                             System.out.println("Organizing files automatically...");
                         }
                         if (opt.equalsIgnoreCase("y") || auto) {
-                            LocalDateTime ldTOfFile = getExifDate(file);
+                            LocalDateTime dateFile = getExifDate(file);
                             String[] pathFile = file.getPath().split(folder.getName()); // file path splitted
-                            Path finalPath = null;
+                            Path concatenatedPath = null;
+                            Boolean isOrganized = false;
 
-                            if (ldTOfFile != null)
-                                finalPath = getConcatenatedPath(pathFile, folder.getName(), String.valueOf(ldTOfFile.getYear()));
-                            else
-                                finalPath = getConcatenatedPath(pathFile, folder.getName(), "Unknown date");
 
-                            new File(finalPath.toString().split(file.getName())[0]).mkdirs();
-                            file.renameTo(new File(finalPath.toString()));
+                            if (dateFile != null){
+                                isOrganized = (pathFile[1].contains(String.valueOf(dateFile.getYear())));
+                                concatenatedPath = getConcatenatedPath(pathFile, folder.getName(), String.valueOf(dateFile.getYear()));
+                            }else {
+                                concatenatedPath = getConcatenatedPath(pathFile, folder.getName(), "Unknown date");
+                            }
+                            if(!isOrganized) {
+                                String finalPath = checkPatternOfPath(in, concatenatedPath, file, dateFile);
+                                if (finalPath != null) {
+                                    new File(finalPath).mkdirs();
+                                    file.renameTo(new File(concatenatedPath.toString()));
+                                }
+                            }
                         }
-                    }
-                }
+            }
+        }
+    }
+
+    private static String checkPatternOfPath(Scanner in, Path concatenatedPath, File file, LocalDateTime dateFile){
+        try{
+            return concatenatedPath.toString().split(file.getName())[0];
+        }catch (PatternSyntaxException e){
+            String opt = "";
+            System.out.println("Wrong filename.\nDo you accept rename this file to 'dd-mm-yyyy' to continue (y/n)");
+            while (!opt.equalsIgnoreCase("y") && !opt.equalsIgnoreCase("n"))
+                opt = in.nextLine();
+            if(opt.equalsIgnoreCase("y")){
+                File tempFile = new File(file.getParentFile()+File.separator+dateFile.getDayOfMonth()+"-"+dateFile.getMonthValue()+"-"+dateFile.getYear());
+                file.renameTo(tempFile);
+                return concatenatedPath.toString().split(tempFile.getName())[0];
+            }else{
+                return null;
             }
         }
     }
 
     private static Path getConcatenatedPath(String[] pathFile, String folderName, String middleName) {
-        return Paths.get(pathFile[0] + folderName + "\\" + middleName + "\\" + pathFile[1]);
+        return Paths.get(pathFile[0] + folderName + File.separator + middleName + File.separator + pathFile[1]);
     }
 
     public static void main(String[] args) {
