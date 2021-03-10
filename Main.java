@@ -23,7 +23,6 @@ import java.time.ZoneId;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.PatternSyntaxException;
 
 public class Main {
 
@@ -268,8 +267,8 @@ public class Main {
                                             }
                                     }
                                 }
-                                System.gc();
                             }
+                            System.gc();
                             chooseToDelete(in, toDelete, files, isImage);
                         }
                     }
@@ -375,58 +374,61 @@ public class Main {
             System.out.println("There aren't any duplicated files");
     }
 
+    public static boolean isNameFolderAYear(String nameFolder){
+        try {
+            int year = Integer.parseInt(nameFolder);
+            if(year>=1800 && year<=LocalDateTime.now().getYear())
+                return true;
+        }catch(NumberFormatException e){
+            return false;
+        }
+        return false;
+    }
+
+    public static String gotOrganized(File file, File folder, String folderName,String[] pathFile, boolean isDateNull){
+        if(!file.getAbsolutePath().contains(folder.getAbsolutePath() + File.separator + folderName+File.separator) &&
+                !file.getAbsolutePath().contains(folder.getAbsolutePath() + File.separator + "not organize"+File.separator)){
+            Path concatenatedPath = getConcatenatedPath(pathFile, folder.getName(), folderName);
+
+            if(!isDateNull || !isNameFolderAYear(pathFile[1].split(File.separator)[1])) {
+                String finalPath = concatenatedPath.getParent().toString();
+                if (finalPath != null) {
+                    new File(finalPath).mkdirs(); //create folders
+                    file.renameTo(new File(concatenatedPath.toString()));
+                    return concatenatedPath.toString();
+                }
+            }
+        }
+        return null;
+    }
+
     public static void organizeFiles(Scanner in, File folder) throws IOException {
 
-        String opt = "";
-        System.out.println("Do you want to organize yourself(Y) or automatically(A)");
-
-        while (!opt.equalsIgnoreCase("y") && !opt.equalsIgnoreCase("a"))
-            opt = in.nextLine();
-
-        boolean auto = opt.equalsIgnoreCase("a");
-
+        System.out.println("WARNING: if you want that some photos or folders to NOT being organized by year,\nput them on a folder named 'not organize' in the root folder" +
+                "\n(press any key to continue).");
+        in.next();
+        List<String> moved=new ArrayList<>();
         for (File f : folder.listFiles()) {
             Iterator<File> it = getFile(f, new ArrayList<>());
             while (it.hasNext()) {
                 File file = it.next();
-                if (!auto) {
-                    if(getMimeType(file).equals("image")){
-                        Dimension d = getImageDimension(file);
-                        if( d != null)
-                            getPicture(new FileProperties(file, false, false, d, null));
-                    }
-                    System.out.println("Do you want organize this photo ['" + file.getAbsolutePath() + "'] ? (y/n)");
-                    opt = in.nextLine();
-                } else {
-                    System.out.println("Organizing files automatically...");
-                }
-                if (opt.equalsIgnoreCase("y") || auto) {
-                    LocalDateTime dateFile = getExifDate(file);
-                    String[] pathFile = file.getPath().split(folder.getName()); // file path splitted
-                    Path concatenatedPath;
+                LocalDateTime dateFile = getExifDate(file);
+                String[] pathFile = file.getPath().split(folder.getName());
 
-                    if (dateFile != null){
-                        if(!file.getAbsolutePath().contains(folder.getAbsolutePath() + File.separator + dateFile.getYear()+File.separator)){
-                            concatenatedPath = getConcatenatedPath(pathFile, folder.getName(), String.valueOf(dateFile.getYear()));
-                            String finalPath =concatenatedPath.getParent().toString();
-                            if(finalPath!=null){
-                                new File(finalPath).mkdirs(); //create folders
-                                file.renameTo(new File(concatenatedPath.toString()));
-                            }
-                        }
-                    }else {
-                        if(!file.getAbsolutePath().contains(folder.getAbsolutePath() + File.separator + "Unknown date"+File.separator)) {
-                            concatenatedPath = getConcatenatedPath(pathFile, folder.getName(), "Unknown date");
-                            String finalPath =concatenatedPath.getParent().toString();
-                            if (finalPath != null) {
-                                new File(finalPath).mkdirs(); //create folders
-                                file.renameTo(new File(concatenatedPath.toString()));
-                            }
-                        }
-                    }
+                if (dateFile != null){
+                    String path=gotOrganized(file,folder,String.valueOf(dateFile.getYear()),pathFile,false);
+                    if(path!=null)
+                      moved.add(path);
+                }else {
+                    String path = gotOrganized(file,folder,"Unknown date",pathFile,true);
+                    if(path!=null)
+                        moved.add(path);
                 }
             }
         }
+        System.out.println(moved.size()+" photos were organized, new paths:");
+        for(String s:moved)
+            System.out.println(s);
     }
 
 
