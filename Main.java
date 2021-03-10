@@ -13,9 +13,7 @@ import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.ImageInputStream;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.io.*;
-import java.lang.reflect.Array;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -405,8 +403,8 @@ public class Main {
                         if (opt.equalsIgnoreCase("y") || auto) {
                             LocalDateTime dateFile = getExifDate(file);
                             String[] pathFile = file.getPath().split(folder.getName()); // file path splitted
-                            Path concatenatedPath = null;
-                            Boolean isOrganized = false;
+                            Path concatenatedPath;
+                            boolean isOrganized = false;
 
 
                             if (dateFile != null){
@@ -455,8 +453,8 @@ public class Main {
             Scanner in = new Scanner(System.in);
             if(args.length == 0)
                 throw new ScriptException("Please insert a directory");
-//            if(args.length > 1)
-//                throw new ScriptException("Upss too many arguments!");
+           if(args.length > 1)
+                throw new ScriptException("Upss too many arguments!");
 
             String directory = args[0];
             File folder = new File(directory);
