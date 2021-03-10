@@ -142,11 +142,11 @@ public class Main {
     private static void getMaps(Scanner in,File folder){
         File lib = null;
         if(System.getProperty("os.name").toLowerCase().contains("win"))
-            lib=new File("/src/opencv_videoio_ffmpeg451_64.dll");
+            lib=new File("opencv_videoio_ffmpeg451_64.dll");
         else if(System.getProperty("os.name").toLowerCase().contains("mac"))
             System.out.println("Library unavailable, sorry.");
         else
-            lib=new File("/src/libopencv_java451.so");
+            lib=new File("libopencv_java451.so");
 
         System.load(lib.getAbsolutePath());
         ImgHashBase alg = AverageHash.create();
