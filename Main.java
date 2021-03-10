@@ -233,46 +233,46 @@ public class Main {
                     fileP = files.get(i);
                     n++;
                     System.out.println("File: " + n);
-                        if (!files.get(i).getSeen() && !files.get(i).getToDelete()) {
-                            if(isImage) {
-                                matrix1 = Imgcodecs.imread(fileP.getFile().getAbsolutePath());
-                                hash1 = getHash(ihb,matrix1,hash1);
-                            }
-                            if(!isImage || hash1!=null) {
-                                toDelete.clear();
-                                toDelete.add(fileP);
-                                for (int j = i + 1; j < files.size(); j++) {
-                                    System.out.println("File " + n + ": " + j + "/" + files.size());
-                                    secondFileP = files.get(j);
-                                    if (!files.get(j).getSeen() && !files.get(j).getToDelete()) {
-                                        boolean cantCompare = false;
-                                        if (fileP.getDate() != null && secondFileP.getDate() != null)
-                                            if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getNano() - secondFileP.getDate().getNano()), TimeUnit.NANOSECONDS) > 1)
-                                                cantCompare = true;
-                                        if (isImage) {
-                                            if (Math.abs(fileP.getProportion() - secondFileP.getProportion()) <= 0.02f && !cantCompare) {
-                                                matrix2 = Imgcodecs.imread(secondFileP.getFile().getAbsolutePath());
-                                                hash2 = getHash(ihb,matrix2,hash2);
-                                                if(hash2!=null) {
-                                                    if (100.0 - (ihb.compare(hash1, hash2) * 100.0 / 64.0) >= percentage) {
-                                                        toDelete.add(secondFileP);
-                                                        secondFileP.setSeen(true);
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            if (!cantCompare)
-                                                if (isDuplicatedVideo(fileP.getFile(), secondFileP.getFile())) {
+                    if (!files.get(i).getSeen() && !files.get(i).getToDelete()) {
+                        if(isImage) {
+                            matrix1 = Imgcodecs.imread(fileP.getFile().getAbsolutePath());
+                            hash1 = getHash(ihb,matrix1,hash1);
+                        }
+                        if(!isImage || hash1!=null) {
+                            toDelete.clear();
+                            toDelete.add(fileP);
+                            for (int j = i + 1; j < files.size(); j++) {
+                                System.out.println("File " + n + ": " + j + "/" + files.size());
+                                secondFileP = files.get(j);
+                                if (!files.get(j).getSeen() && !files.get(j).getToDelete()) {
+                                    boolean cantCompare = false;
+                                    if (fileP.getDate() != null && secondFileP.getDate() != null)
+                                        if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getNano() - secondFileP.getDate().getNano()), TimeUnit.NANOSECONDS) > 1)
+                                            cantCompare = true;
+                                    if (isImage) {
+                                        if (Math.abs(fileP.getProportion() - secondFileP.getProportion()) <= 0.02f && !cantCompare) {
+                                            matrix2 = Imgcodecs.imread(secondFileP.getFile().getAbsolutePath());
+                                            hash2 = getHash(ihb,matrix2,hash2);
+                                            if(hash2!=null) {
+                                                if (100.0 - (ihb.compare(hash1, hash2) * 100.0 / 64.0) >= percentage) {
                                                     toDelete.add(secondFileP);
                                                     secondFileP.setSeen(true);
                                                 }
+                                            }
                                         }
+                                    } else {
+                                        if (!cantCompare)
+                                            if (isDuplicatedVideo(fileP.getFile(), secondFileP.getFile())) {
+                                                toDelete.add(secondFileP);
+                                                secondFileP.setSeen(true);
+                                            }
                                     }
-                                    System.gc();
                                 }
-                                chooseToDelete(in, toDelete, files, isImage);
+                                System.gc();
                             }
+                            chooseToDelete(in, toDelete, files, isImage);
                         }
+                    }
                 }
                 deleteFiles(files);
             }
@@ -389,59 +389,46 @@ public class Main {
             Iterator<File> it = getFile(f, new ArrayList<>());
             while (it.hasNext()) {
                 File file = it.next();
-                        if (!auto) {
-                            if(getMimeType(file).equals("image")){
-                                Dimension d = getImageDimension(file);
-                                if( d != null)
-                                    getPicture(new FileProperties(file, false, false, d, null));
-                            }
-                             System.out.println("Do you want organize this photo ['" + file.getAbsolutePath() + "'] ? (y/n)");
-                            opt = in.nextLine();
-                        } else {
-                            System.out.println("Organizing files automatically...");
-                        }
-                        if (opt.equalsIgnoreCase("y") || auto) {
-                            LocalDateTime dateFile = getExifDate(file);
-                            String[] pathFile = file.getPath().split(folder.getName()); // file path splitted
-                            Path concatenatedPath;
-                            boolean isOrganized = false;
+                if (!auto) {
+                    if(getMimeType(file).equals("image")){
+                        Dimension d = getImageDimension(file);
+                        if( d != null)
+                            getPicture(new FileProperties(file, false, false, d, null));
+                    }
+                    System.out.println("Do you want organize this photo ['" + file.getAbsolutePath() + "'] ? (y/n)");
+                    opt = in.nextLine();
+                } else {
+                    System.out.println("Organizing files automatically...");
+                }
+                if (opt.equalsIgnoreCase("y") || auto) {
+                    LocalDateTime dateFile = getExifDate(file);
+                    String[] pathFile = file.getPath().split(folder.getName()); // file path splitted
+                    Path concatenatedPath;
 
-
-                            if (dateFile != null){
-                                isOrganized = (pathFile[1].contains(String.valueOf(dateFile.getYear())));
-                                concatenatedPath = getConcatenatedPath(pathFile, folder.getName(), String.valueOf(dateFile.getYear()));
-                            }else {
-                                concatenatedPath = getConcatenatedPath(pathFile, folder.getName(), "Unknown date");
-                            }
-                            if(!isOrganized) {
-                                String finalPath = checkPatternOfPath(in, concatenatedPath, file, dateFile);
-                                if (finalPath != null) {
-                                    new File(finalPath).mkdirs();
-                                    file.renameTo(new File(concatenatedPath.toString()));
-                                }
+                    if (dateFile != null){
+                        if(!file.getAbsolutePath().contains(folder.getAbsolutePath() + File.separator + dateFile.getYear()+File.separator)){
+                            concatenatedPath = getConcatenatedPath(pathFile, folder.getName(), String.valueOf(dateFile.getYear()));
+                            String finalPath =concatenatedPath.getParent().toString();
+                            if(finalPath!=null){
+                                new File(finalPath).mkdirs(); //create folders
+                                file.renameTo(new File(concatenatedPath.toString()));
                             }
                         }
+                    }else {
+                        if(!file.getAbsolutePath().contains(folder.getAbsolutePath() + File.separator + "Unknown date"+File.separator)) {
+                            concatenatedPath = getConcatenatedPath(pathFile, folder.getName(), "Unknown date");
+                            String finalPath =concatenatedPath.getParent().toString();
+                            if (finalPath != null) {
+                                new File(finalPath).mkdirs(); //create folders
+                                file.renameTo(new File(concatenatedPath.toString()));
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
-    private static String checkPatternOfPath(Scanner in, Path concatenatedPath, File file, LocalDateTime dateFile){
-        try{
-            return concatenatedPath.toString().split(file.getName())[0];
-        }catch (PatternSyntaxException e){
-            String opt = "";
-            System.out.println("Wrong filename.\nDo you accept rename this file to 'dd-mm-yyyy' to continue (y/n)");
-            while (!opt.equalsIgnoreCase("y") && !opt.equalsIgnoreCase("n"))
-                opt = in.nextLine();
-            if(opt.equalsIgnoreCase("y")){
-                File tempFile = new File(file.getParentFile()+File.separator+dateFile.getDayOfMonth()+"-"+dateFile.getMonthValue()+"-"+dateFile.getYear());
-                file.renameTo(tempFile);
-                return concatenatedPath.toString().split(tempFile.getName())[0];
-            }else{
-                return null;
-            }
-        }
-    }
 
     private static Path getConcatenatedPath(String[] pathFile, String folderName, String middleName) {
         return Paths.get(pathFile[0] + folderName + File.separator + middleName + File.separator + pathFile[1]);
@@ -453,7 +440,7 @@ public class Main {
             Scanner in = new Scanner(System.in);
             if(args.length == 0)
                 throw new ScriptException("Please insert a directory");
-           if(args.length > 1)
+            if(args.length > 1)
                 throw new ScriptException("Upss too many arguments!");
 
             String directory = args[0];
