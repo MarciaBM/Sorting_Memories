@@ -13,11 +13,19 @@ import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.ImageInputStream;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.*;
+import java.lang.reflect.Array;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.PatternSyntaxException;
 
 public class Main {
 
@@ -147,7 +155,6 @@ public class Main {
 
         Map<Float, List<FileProperties>> images = populateMapsWithAspectRatio();
         Map<Long, List<FileProperties>> videos = new HashMap<>();
-
         int sumVideos=0;
         System.out.println("Loading files...");
         for(File f:folder.listFiles()) {
@@ -159,11 +166,12 @@ public class Main {
                     if(d!=null) {
                         float proportion = (float) d.height / (float) d.width, valueInMap = AR_OTHER;
                         Set<Float> aspectRatios = images.keySet();
+
                         for (float aR : aspectRatios)
                             if (Math.abs(proportion - aR) <= PROPORTION_MARGIN)
                                 valueInMap = aR;
 
-                        images.get(valueInMap).add(new FileProperties(file, false, false, d, getExifDate(file)));
+                        images.get(valueInMap).add(new FileProperties(file, false, false,d,getExifDate(file)));
                     }
                 }else if(!getMimeType(file).equals("")){
                     sumVideos++;
@@ -241,7 +249,7 @@ public class Main {
                                     if (!files.get(j).getSeen() && !files.get(j).getToDelete()) {
                                         boolean cantCompare = false;
                                         if (fileP.getDate() != null && secondFileP.getDate() != null)
-                                            if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getTime() - secondFileP.getDate().getTime()), TimeUnit.MILLISECONDS) > 1)
+                                            if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getNano() - secondFileP.getDate().getNano()), TimeUnit.NANOSECONDS) > 1)
                                                 cantCompare = true;
                                         if (isImage) {
                                             if (Math.abs(fileP.getProportion() - secondFileP.getProportion()) <= 0.02f && !cantCompare) {
@@ -273,14 +281,16 @@ public class Main {
         }
     }
 
-    private static Date getExifDate(File file) {
+    private static LocalDateTime getExifDate(File file) {
         try {
             Metadata metadata = ImageMetadataReader.readMetadata(file);
             ExifSubIFDDirectory directory = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
-            if (directory != null)
-                return directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
-            else
+            if (directory != null) {
+                Date dateTemp = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
+                return dateTemp != null ? Instant.ofEpochMilli(dateTemp.getTime()).atZone(ZoneId.systemDefault()).toLocalDateTime() : null;
+            } else {
                 return null;
+            }
         } catch (ImageProcessingException | IOException ex) {
             return null;
         }
@@ -367,7 +377,77 @@ public class Main {
             System.out.println("There aren't any duplicated files");
     }
 
-    public static void organizeFiles(){}
+    public static void organizeFiles(Scanner in, File folder) throws IOException {
+
+        String opt = "";
+        System.out.println("Do you want to organize yourself(Y) or automatically(A)");
+
+        while (!opt.equalsIgnoreCase("y") && !opt.equalsIgnoreCase("a"))
+            opt = in.nextLine();
+
+        boolean auto = opt.equalsIgnoreCase("a");
+
+        for (File f : folder.listFiles()) {
+            Iterator<File> it = getFile(f, new ArrayList<>());
+            while (it.hasNext()) {
+                File file = it.next();
+                        if (!auto) {
+                            if(getMimeType(file).equals("image")){
+                                Dimension d = getImageDimension(file);
+                                if( d != null)
+                                    getPicture(new FileProperties(file, false, false, d, null));
+                            }
+                             System.out.println("Do you want organize this photo ['" + file.getAbsolutePath() + "'] ? (y/n)");
+                            opt = in.nextLine();
+                        } else {
+                            System.out.println("Organizing files automatically...");
+                        }
+                        if (opt.equalsIgnoreCase("y") || auto) {
+                            LocalDateTime dateFile = getExifDate(file);
+                            String[] pathFile = file.getPath().split(folder.getName()); // file path splitted
+                            Path concatenatedPath = null;
+                            Boolean isOrganized = false;
+
+
+                            if (dateFile != null){
+                                isOrganized = (pathFile[1].contains(String.valueOf(dateFile.getYear())));
+                                concatenatedPath = getConcatenatedPath(pathFile, folder.getName(), String.valueOf(dateFile.getYear()));
+                            }else {
+                                concatenatedPath = getConcatenatedPath(pathFile, folder.getName(), "Unknown date");
+                            }
+                            if(!isOrganized) {
+                                String finalPath = checkPatternOfPath(in, concatenatedPath, file, dateFile);
+                                if (finalPath != null) {
+                                    new File(finalPath).mkdirs();
+                                    file.renameTo(new File(concatenatedPath.toString()));
+                                }
+                            }
+                        }
+            }
+        }
+    }
+
+    private static String checkPatternOfPath(Scanner in, Path concatenatedPath, File file, LocalDateTime dateFile){
+        try{
+            return concatenatedPath.toString().split(file.getName())[0];
+        }catch (PatternSyntaxException e){
+            String opt = "";
+            System.out.println("Wrong filename.\nDo you accept rename this file to 'dd-mm-yyyy' to continue (y/n)");
+            while (!opt.equalsIgnoreCase("y") && !opt.equalsIgnoreCase("n"))
+                opt = in.nextLine();
+            if(opt.equalsIgnoreCase("y")){
+                File tempFile = new File(file.getParentFile()+File.separator+dateFile.getDayOfMonth()+"-"+dateFile.getMonthValue()+"-"+dateFile.getYear());
+                file.renameTo(tempFile);
+                return concatenatedPath.toString().split(tempFile.getName())[0];
+            }else{
+                return null;
+            }
+        }
+    }
+
+    private static Path getConcatenatedPath(String[] pathFile, String folderName, String middleName) {
+        return Paths.get(pathFile[0] + folderName + File.separator + middleName + File.separator + pathFile[1]);
+    }
 
     public static void main(String[] args) {
 
@@ -402,7 +482,10 @@ public class Main {
                         getMaps(in, folder);
                         break;
                     case "3":
-                        organizeFiles();
+                        folder = new File(directory);
+                        organizeFiles(in, folder);
+                        deleteEmptyFolders(folder, 0);
+
                         break;
                     case "E":
                         System.out.println("Hope you come back :)");
@@ -412,7 +495,7 @@ public class Main {
                 }
             }
 
-        } catch (ScriptException e) {
+        } catch (ScriptException | IOException e) {
             System.out.println(e.getMessage());
         }
     }
@@ -423,9 +506,9 @@ class FileProperties{
     private boolean seen;
     private File file;
     private Dimension dimension;
-    private Date date;
+    private LocalDateTime date;
 
-    public FileProperties(File file,boolean toDelete, boolean seen, Dimension dimension, Date date){
+    public FileProperties(File file, boolean toDelete, boolean seen, Dimension dimension, LocalDateTime date) {
         this.seen = seen;
         this.toDelete = toDelete;
         this.file=file;
@@ -461,13 +544,13 @@ class FileProperties{
         return dimension;
     }
 
-    public Date getDate(){
+    public LocalDateTime getDate() {
         return date;
     }
 }
 
-class ScriptException extends Exception{
-    public ScriptException(String message){
+class ScriptException extends Exception {
+    public ScriptException(String message) {
         super(message);
     }
 }
