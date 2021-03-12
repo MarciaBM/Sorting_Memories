@@ -141,7 +141,7 @@ public class Main {
     private static void getMaps(Scanner in,File folder){
         File lib = null;
         if(System.getProperty("os.name").toLowerCase().contains("win"))
-            lib=new File("opencv_videoio_ffmpeg451_64.dll");
+            lib=new File("opencv_java451.dll");
         else if(System.getProperty("os.name").toLowerCase().contains("mac"))
             System.out.println("Library unavailable, sorry.");
         else
