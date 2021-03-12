@@ -389,8 +389,8 @@ public class Main {
         if(!file.getAbsolutePath().contains(folder.getAbsolutePath() + File.separator + folderName+File.separator) &&
                 !file.getAbsolutePath().contains(folder.getAbsolutePath() + File.separator + "not organize"+File.separator)){
             Path concatenatedPath = getConcatenatedPath(pathFile, folder.getName(), folderName);
-
-            if(!isDateNull || !isNameFolderAYear(pathFile[1].split(File.separator)[1])) {
+            pathFile[1]=pathFile[1].replaceAll("\\\\","/");
+            if(!isDateNull || !isNameFolderAYear(pathFile[1].split("/")[1])) {
                 String finalPath = concatenatedPath.getParent().toString();
                 if (finalPath != null) {
                     new File(finalPath).mkdirs(); //create folders
