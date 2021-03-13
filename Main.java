@@ -128,9 +128,9 @@ public class Main {
             String choice = in.nextLine().trim();
             if (choice.matches("[1-9 ]+|A|V")){
                 List<Integer> result = new ArrayList<>();
-                if(choice.equals("A"))
+                if(choice.equalsIgnoreCase("A"))
                     result.add(-1);
-                else if(choice.equals("V"))
+                else if(choice.equalsIgnoreCase("V"))
                     result.add(-2);
                 else{
                     String[] answer = choice.split(" ");
@@ -478,7 +478,7 @@ public class Main {
                 throw new ScriptException("Please insert a folder's directory");
 
             String command ="";
-            while(!command.equals("E")){
+            while(!command.equalsIgnoreCase("E")){
                 System.out.println("Choose what you want to do:");
                 System.out.println("[1] - Delete empty folders");
                 System.out.println("[2] - Delete duplicated files");
@@ -498,9 +498,9 @@ public class Main {
                         folder = new File(directory);
                         organizeFiles(in, folder);
                         deleteEmptyFolders(folder, 0);
-
                         break;
                     case "E":
+                    case "e":
                         System.out.println("Hope you come back :)");
                         break;
                     default:
