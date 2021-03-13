@@ -282,7 +282,7 @@ public class Main {
                     fileP = files.get(i);
                     n++;
                     System.out.println("File: " + n);
-                    if (!files.get(i).getSeen() && !files.get(i).getToDelete()) {
+                    if (!fileP.getSeen() && !fileP.getToDelete()) {
                         toDelete.clear();
                         toDelete.add(fileP);
                         for (int j = i+1; j < files.size(); j++)
