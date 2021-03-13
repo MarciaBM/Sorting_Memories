@@ -13,6 +13,7 @@ import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.ImageInputStream;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowEvent;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -322,7 +323,7 @@ public class Main {
         }
     }
 
-    private static void getPicture(FileProperties file){
+    private static JFrame getPicture(FileProperties file){
         int width = (int)(file.getDimension().getWidth()*PANEL_HEIGHT/file.getDimension().getHeight());
         Image image = new ImageIcon(file.getFile().getAbsolutePath()).getImage();
         JPanel jPanel = new JPanel() {
@@ -337,25 +338,31 @@ public class Main {
         f.setTitle(file.getFile().getAbsolutePath());
         f.add(jPanel);
         f.setVisible(true);
+        return f;
     }
 
     private static void chooseToDelete(Scanner in,List<FileProperties> toDelete, List<FileProperties> files, boolean isImage){
+        List<JFrame> frames = new ArrayList<>();
         if (toDelete.size() > 1) {
             System.out.println("Duplicated files have been found, please choose the ones you want to delete (separate them with space):");
             for (int m = 0; m < toDelete.size(); m++) {
                 int aux = m + 1;
                 System.out.println(aux + ": " + toDelete.get(m).getFile().getAbsolutePath());
                 if(isImage)
-                    getPicture(toDelete.get(m));
+                    frames.add(getPicture(toDelete.get(m)));
             }
-            System.out.println("E: Keep them all");
+            System.out.println("K: Keep them all");
+            System.out.println("D: Delete them all");
             //user
             boolean accepted=false;
             while(!accepted){
                 String answer = in.nextLine().trim();
-                if (answer.matches("[0-9 ]+|E")) {
+                if (answer.matches("[0-9 ]+|K|D|k|d")) {
                     accepted = true;
-                    if (!answer.equals("E")) {
+                    if(answer.equalsIgnoreCase("D")){
+                        for (FileProperties file : toDelete)
+                            files.get(getIndex(files,file.getFile())).setToDelete(true);
+                    }else if (!answer.equalsIgnoreCase("K")) {
                         String[] numbers = answer.split(" ");
                         for (String s : numbers) {
                             int index = Integer.parseInt(s) - 1;
@@ -367,6 +374,8 @@ public class Main {
                         }
                     }
                 }
+                for (JFrame frame: frames) //close jframe3
+                    frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
             }
         }
     }
@@ -460,8 +469,7 @@ public class Main {
             Scanner in = new Scanner(System.in);
             if(args.length == 0)
                 throw new ScriptException("Please insert a directory");
-            if(args.length > 1)
-             throw new ScriptException("Upss too many arguments!");
+
 
             String directory = args[0];
             File folder = new File(directory);
