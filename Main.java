@@ -218,16 +218,17 @@ public class Main {
         return null;
     }
 
-    private static void getHash (ImgHashBase ihb, Mat mat, Mat hash){
+    private static Mat getHash (ImgHashBase ihb, Mat mat, Mat hash){
         try {
             ihb.compute(mat,hash);
+            return hash;
         } catch (CvException e){
-            hash=null;
+            return null;
         }
     }
 
     private static void deleteDuplicatedFiles2(List<FileProperties> files, FileProperties fileP, boolean isImage,
-                                               Mat hash1, int percentage, int j, List<FileProperties> toDelete, ImgHashBase ihb){
+                                               int percentage, int j, List<FileProperties> toDelete, ImgHashBase ihb){
 
         FileProperties secondFileP = files.get(j);
         if (!secondFileP.getSeen() && !secondFileP.getToDelete()) {
@@ -237,8 +238,8 @@ public class Main {
                     cantCompare = true;
             if (isImage) {
                 if (Math.abs(fileP.getProportion() - secondFileP.getProportion()) <= 0.02f && !cantCompare) {
-                    if (secondFileP.getHash()!=null && hash1!=null) {
-                        if (100.0 - (ihb.compare(hash1,secondFileP.getHash()) * 100.0 / 64.0) >= percentage) {
+                    if (secondFileP.getHash()!=null && fileP.getHash()!=null) {
+                        if (100.0 - (ihb.compare(fileP.getHash(),secondFileP.getHash()) * 100.0 / 64.0) >= percentage) {
                             toDelete.add(secondFileP);
                             secondFileP.setSeen(true);
                         }
@@ -270,7 +271,7 @@ public class Main {
                     System.out.println("Stage " + stage + ": loading data (this might take a while)");
                     for(FileProperties fp:files){
                         mat = Imgcodecs.imread(fp.getFile().getAbsolutePath());
-                        getHash(ihb,mat,fp.getHash());
+                        fp.setHash(getHash(ihb,mat,fp.getHash()));
                         mat.release();
                     }
                 }else
@@ -284,7 +285,7 @@ public class Main {
                         toDelete.clear();
                         toDelete.add(fileP);
                         for (int j = i+1; j < files.size(); j++)
-                            deleteDuplicatedFiles2(files,fileP,isImage,fileP.getHash(), percentage,j,toDelete,ihb);
+                            deleteDuplicatedFiles2(files,fileP,isImage, percentage,j,toDelete,ihb);
                         chooseToDelete(in, toDelete, files, isImage);
                     }
 
@@ -556,6 +557,10 @@ class FileProperties{
 
     public Mat getHash(){
         return hash;
+    }
+
+    public void setHash(Mat hash){
+        this.hash=hash;
     }
 
 }
