@@ -218,12 +218,11 @@ public class Main {
         return null;
     }
 
-    private static Mat getHash (ImgHashBase ihb, Mat mat, Mat hash){
+    private static void getHash (ImgHashBase ihb, Mat mat, Mat hash){
         try {
             ihb.compute(mat,hash);
-            return hash;
         } catch (CvException e){
-            return null;
+            hash.release();
         }
     }
 
@@ -253,13 +252,13 @@ public class Main {
                     }
             }
         }
-
     }
 
     private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator, List<Integer> stages, File folder,boolean isImage,int percentage, ImgHashBase ihb){
 
         int n, stage=0;
         FileProperties fileP;
+        Mat mat, hash = new Mat();
         List<FileProperties> toDelete = new ArrayList<>();
 
         while(iterator.hasNext()){
@@ -270,9 +269,11 @@ public class Main {
                 if(isImage) {
                     System.out.println("Stage " + stage + ": loading data (this might take a while)");
                     for(FileProperties fp:files){
-                        Mat mat = Imgcodecs.imread(fp.getFile().getAbsolutePath()),hash = new Mat();
-                        hash=getHash(ihb,mat,hash);
-                        fp.setHash(hash);
+                        hash.release();
+                        mat = Imgcodecs.imread(fp.getFile().getAbsolutePath());
+                        getHash(ihb,mat,hash);
+                        if(!hash.empty())
+                            fp.setHash(hash);
                         mat.release();
                     }
                 }else
@@ -360,7 +361,7 @@ public class Main {
                         String[] numbers = answer.split(" ");
                         for (String s : numbers) {
                             int index = Integer.parseInt(s) - 1;
-                            if(index>=files.size() || index <0){
+                            if(index>=toDelete.size() || index <0){
                                 accepted=false;
                                 break;
                             }
@@ -522,6 +523,7 @@ class FileProperties{
         this.file=file;
         this.dimension=dimension;
         this.date=date;
+        hash=null;
     }
 
     public boolean getToDelete(){
