@@ -177,7 +177,7 @@ public class Main {
                             if (Math.abs(proportion - aR) <= PROPORTION_MARGIN)
                                 valueInMap = aR;
 
-                        images.get(valueInMap).add(new FileProperties(file, false, false,d,getExifDate(file)));
+                        images.get(valueInMap).add(new FileProperties(file, false, false,d,getExifDate(file),new Mat()));
 
                     }
                 }else if(!getMimeType(file).equals("")){
@@ -185,7 +185,7 @@ public class Main {
                     long size=file.length();
                     if(!videos.containsKey(size))
                         videos.put(size,new ArrayList<>());
-                    videos.get(size).add(new FileProperties(file,false,false,null,getExifDate(file)));
+                    videos.get(size).add(new FileProperties(file,false,false,null,getExifDate(file),null));
                 }
             }
         }
@@ -222,7 +222,7 @@ public class Main {
         try {
             ihb.compute(mat,hash);
         } catch (CvException e){
-            hash.release();
+            hash=null;
         }
     }
 
@@ -258,7 +258,7 @@ public class Main {
 
         int n, stage=0;
         FileProperties fileP;
-        Mat mat, hash = new Mat(), aux;
+        Mat mat;
         List<FileProperties> toDelete = new ArrayList<>();
 
         while(iterator.hasNext()){
@@ -270,11 +270,7 @@ public class Main {
                     System.out.println("Stage " + stage + ": loading data (this might take a while)");
                     for(FileProperties fp:files){
                         mat = Imgcodecs.imread(fp.getFile().getAbsolutePath());
-                        getHash(ihb,mat,hash);
-                        if(!hash.empty()) {
-                            aux=hash;
-                            fp.setHash(aux);
-                        }
+                        getHash(ihb,mat,fp.getHash());
                         mat.release();
                     }
                 }else
@@ -517,13 +513,13 @@ class FileProperties{
     private LocalDateTime date;
     private Mat hash;
 
-    public FileProperties(File file, boolean toDelete, boolean seen, Dimension dimension, LocalDateTime date) {
+    public FileProperties(File file, boolean toDelete, boolean seen, Dimension dimension, LocalDateTime date, Mat hash) {
         this.seen = seen;
         this.toDelete = toDelete;
         this.file=file;
         this.dimension=dimension;
         this.date=date;
-        hash=null;
+        this.hash=hash;
     }
 
     public boolean getToDelete(){
@@ -562,9 +558,6 @@ class FileProperties{
         return hash;
     }
 
-    public void setHash(Mat hash){
-        this.hash=hash;
-    }
 }
 
 class ScriptException extends Exception {
