@@ -279,8 +279,12 @@ public class Main {
                     System.out.println("Videos and others:");
 
                 for (int i = 0; i < files.size() - 1; i++) {
-                    if(i!=0)
-                        files.get(i-1).getHash().release();
+                    if(i!=0){
+                        if(files.get(i-1).getHash() != null){
+                            files.get(i-1).getHash().release();
+                            files.get(i-1).setHash(null);
+                        }
+                    }
                     fileP = files.get(i);
                     n++;
                     System.out.println("File: " + n);
@@ -290,6 +294,7 @@ public class Main {
                         for (int j = i+1; j < files.size(); j++)
                             deleteDuplicatedFiles2(files,fileP,isImage, percentage,j,toDelete,ihb);
                         chooseToDelete(in, toDelete, files, isImage);
+                        System.gc();
                     }
 
                 }
