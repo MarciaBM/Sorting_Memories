@@ -279,6 +279,8 @@ public class Main {
                     System.out.println("Videos and others:");
 
                 for (int i = 0; i < files.size() - 1; i++) {
+                    if(i!=0)
+                        files.get(i-1).getHash().release();
                     fileP = files.get(i);
                     n++;
                     System.out.println("File: " + n);
