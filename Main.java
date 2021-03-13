@@ -155,7 +155,7 @@ public class Main {
         Map<Float, List<FileProperties>> images = populateMapsWithAspectRatio();
         Map<Long, List<FileProperties>> videos = new HashMap<>();
         int sumVideos=0;
-        String type = chooseDuplicatedType(in);
+        String type = chooseDuplicatedType(in,folder);
         System.out.println("Loading files...");
         for(File f:folder.listFiles()) {
             Iterator<File> it = getFile(f, new ArrayList<>());
@@ -219,7 +219,7 @@ public class Main {
         }
     }
 
-    private static String chooseDuplicatedType(Scanner in){
+    private static String chooseDuplicatedType(Scanner in, File folder){
         System.out.println("Choose the algorithm you want to run:");
         System.out.println("[1] - Search for duplicates for all the root folder");
         System.out.println("[2] - Search if a specific folder has duplicated files all over the root folder.");
@@ -232,7 +232,7 @@ public class Main {
         else {
             System.out.println("Please insert the absolute path of the folder you want to search for duplicates:");
             anwser="";
-            while(!new File(anwser).exists())
+            while(!new File(anwser).exists() && !anwser.contains(folder.getAbsolutePath()))
                 anwser=in.nextLine();
             if(!anwser.endsWith(File.separator))
                 anwser+=File.separator;
@@ -240,11 +240,48 @@ public class Main {
         }
     }
 
+    private static void deleteDuplicatedFiles2(List<FileProperties> files, FileProperties fileP, String type, boolean isImage,
+                                               Mat hash2, Mat hash1, int percentage, int n, int j, int i, List<FileProperties> toDelete, ImgHashBase ihb){
+
+        System.out.println("File " + n + ": " + j + "/" + files.size());
+        FileProperties secondFileP = files.get(j);
+        if (type.equals("") || (!type.equals("") && j != i)){
+            if (!files.get(j).getSeen() && !files.get(j).getToDelete()) {
+                boolean cantCompare = false;
+                if (fileP.getDate() != null && secondFileP.getDate() != null)
+                    if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getNano() - secondFileP.getDate().getNano()), TimeUnit.NANOSECONDS) > 1)
+                        cantCompare = true;
+                if (isImage) {
+                    if (Math.abs(fileP.getProportion() - secondFileP.getProportion()) <= 0.02f && !cantCompare) {
+                        Mat matrix2 = Imgcodecs.imread(secondFileP.getFile().getAbsolutePath());
+                        getHash(ihb, matrix2, hash2);
+                        if (!hash2.empty()) {
+                            if (100.0 - (ihb.compare(hash1, hash2) * 100.0 / 64.0) >= percentage) {
+                                toDelete.add(secondFileP);
+                                if (type.equals(""))
+                                    secondFileP.setSeen(true);
+                            }
+                        }
+                        matrix2.release();
+                        hash2.release();
+                    }
+                } else {
+                    if (!cantCompare)
+                        if (isDuplicatedVideo(fileP.getFile(), secondFileP.getFile())) {
+                            toDelete.add(secondFileP);
+                            if(type.equals(""))
+                                secondFileP.setSeen(true);
+                        }
+                }
+            }
+        }
+    }
+
     private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator, List<Integer> stages,boolean isImage,int percentage, String type){
         ImgHashBase ihb = AverageHash.create();
         int n = 0, stage=0;
-        Mat matrix1, matrix2, hash1 = new Mat(), hash2 = new Mat();
-        FileProperties fileP, secondFileP;
+        Mat matrix1=new Mat(), hash1 = new Mat();
+        FileProperties fileP;
         List<FileProperties> toDelete = new ArrayList<>();
 
         while(iterator.hasNext()){
@@ -269,42 +306,13 @@ public class Main {
                                 int a = 0;
                                 if (type.equals(""))
                                     a = i + 1;
+                                for (int j = a; j < files.size(); j++)
+                                    deleteDuplicatedFiles2(files,fileP, type,isImage,new Mat(),hash1, percentage,n,j,i,toDelete,ihb);
 
-                                for (int j = a; j < files.size(); j++) {
-                                    System.out.println("File " + n + ": " + j + "/" + files.size());
-                                    secondFileP = files.get(j);
-                                    if (type.equals("") || (!type.equals("") && j != i)){
-                                        if (!files.get(j).getSeen() && !files.get(j).getToDelete()) {
-                                            boolean cantCompare = false;
-                                            if (fileP.getDate() != null && secondFileP.getDate() != null)
-                                                if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getNano() - secondFileP.getDate().getNano()), TimeUnit.NANOSECONDS) > 1)
-                                                    cantCompare = true;
-                                            if (isImage) {
-                                                if (Math.abs(fileP.getProportion() - secondFileP.getProportion()) <= 0.02f && !cantCompare) {
-                                                    matrix2 = Imgcodecs.imread(secondFileP.getFile().getAbsolutePath());
-                                                    getHash(ihb, matrix2, hash2);
-                                                    if (!hash2.empty()) {
-                                                        if (100.0 - (ihb.compare(hash1, hash2) * 100.0 / 64.0) >= percentage) {
-                                                            toDelete.add(secondFileP);
-                                                            if (type.equals(""))
-                                                                secondFileP.setSeen(true);
-                                                        }
-                                                    }
-                                                }
-                                            } else {
-                                                if (!cantCompare)
-                                                    if (isDuplicatedVideo(fileP.getFile(), secondFileP.getFile())) {
-                                                        toDelete.add(secondFileP);
-                                                        if(type.equals(""))
-                                                        secondFileP.setSeen(true);
-                                                    }
-                                            }
-                                        }
-                                    }
-                                }
-                                System.gc();
                                 chooseToDelete(in, toDelete, files, isImage);
                             }
+                            matrix1.release();
+                            hash1.release();
                         }
                     }
                 }
@@ -477,8 +485,8 @@ public class Main {
             Scanner in = new Scanner(System.in);
             if(args.length == 0)
                 throw new ScriptException("Please insert a directory");
-            if(args.length > 1)
-                throw new ScriptException("Upss too many arguments!");
+            //if(args.length > 1)
+               // throw new ScriptException("Upss too many arguments!");
 
             String directory = args[0];
             File folder = new File(directory);
