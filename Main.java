@@ -222,7 +222,7 @@ public class Main {
         try {
             ihb.compute(mat,hash);
         } catch (CvException e){
-            hash.create(-1,-1,0);
+            hash.release();
         }
     }
 
@@ -258,7 +258,7 @@ public class Main {
 
         int n, stage=0;
         FileProperties fileP;
-        Mat mat, hash = new Mat(), aux=new Mat();
+        Mat mat, hash = new Mat(), aux;
         List<FileProperties> toDelete = new ArrayList<>();
 
         while(iterator.hasNext()){
@@ -271,8 +271,10 @@ public class Main {
                     for(FileProperties fp:files){
                         mat = Imgcodecs.imread(fp.getFile().getAbsolutePath());
                         getHash(ihb,mat,hash);
-                        if(hash.cols()==1)
-                            fp.setHash(hash);
+                        if(!hash.empty()) {
+                            aux=hash;
+                            fp.setHash(aux);
+                        }
                         mat.release();
                     }
                 }else
