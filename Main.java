@@ -138,7 +138,7 @@ public class Main {
         }
     }
 
-    private static void getMaps(Scanner in,File folder){
+    private static void loadLib(){
         File lib = null;
         if(System.getProperty("os.name").toLowerCase().contains("win"))
             lib=new File("opencv_java451.dll");
@@ -148,10 +148,14 @@ public class Main {
             lib=new File("libopencv_java451.so");
 
         System.load(lib.getAbsolutePath());
+    }
 
+    private static void getMaps(Scanner in,File folder){
+        loadLib();
         Map<Float, List<FileProperties>> images = populateMapsWithAspectRatio();
         Map<Long, List<FileProperties>> videos = new HashMap<>();
         int sumVideos=0;
+        String type = chooseDuplicatedType(in);
         System.out.println("Loading files...");
         for(File f:folder.listFiles()) {
             Iterator<File> it = getFile(f, new ArrayList<>());
@@ -180,9 +184,9 @@ public class Main {
         }
         List<Integer> result=printStages(in,images.values().iterator(),sumVideos);
         int percentage=getPercentage(in);
-        deleteDuplicatedFiles(in,images.values().iterator(),result,true,percentage);
+        deleteDuplicatedFiles(in,images.values().iterator(),result,true,percentage,type);
         if(!System.getProperty("os.name").toLowerCase().contains("win"))
-            deleteDuplicatedFiles(in,videos.values().iterator(),result,false,percentage);
+            deleteDuplicatedFiles(in,videos.values().iterator(),result,false,percentage,type);
     }
 
     public static Dimension getImageDimension(File imgFile){
@@ -207,16 +211,36 @@ public class Main {
         return null;
     }
 
-    private static Mat getHash (ImgHashBase ihb,Mat mat, Mat hash){
+    private static void getHash (ImgHashBase ihb, Mat mat, Mat hash){
         try {
             ihb.compute(mat,hash);
-            return hash;
         } catch (CvException e){
-            return null;
+            hash.release();
         }
     }
 
-    private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator, List<Integer> stages,boolean isImage,int percentage){
+    private static String chooseDuplicatedType(Scanner in){
+        System.out.println("Choose the algorithm you want to run:");
+        System.out.println("[1] - Search for duplicates for all the root folder");
+        System.out.println("[2] - Search if a specific folder has duplicated files all over the root folder.");
+        String anwser="";
+        while(!anwser.matches("[1-2]")){
+            anwser=in.nextLine();
+        }
+        if(anwser.equals("1"))
+            return "";
+        else {
+            System.out.println("Please insert the absolute path of the folder you want to search for duplicates:");
+            anwser="";
+            while(!new File(anwser).exists())
+                anwser=in.nextLine();
+            if(!anwser.endsWith(File.separator))
+                anwser+=File.separator;
+            return anwser;
+        }
+    }
+
+    private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator, List<Integer> stages,boolean isImage,int percentage, String type){
         ImgHashBase ihb = AverageHash.create();
         int n = 0, stage=0;
         Mat matrix1, matrix2, hash1 = new Mat(), hash2 = new Mat();
@@ -228,48 +252,59 @@ public class Main {
             List<FileProperties> files = iterator.next();
             if(stages.contains(stage) || stages.contains(-1) || !isImage) {
                 System.out.println("Stage " + stage + ":");
+
                 for (int i = 0; i < files.size() - 1; i++) {
                     fileP = files.get(i);
                     n++;
-                    System.out.println("File: " + n);
-                    if (!files.get(i).getSeen() && !files.get(i).getToDelete()) {
-                        if(isImage) {
-                            matrix1 = Imgcodecs.imread(fileP.getFile().getAbsolutePath());
-                            hash1 = getHash(ihb,matrix1,hash1);
-                        }
-                        if(!isImage || hash1!=null) {
-                            toDelete.clear();
-                            toDelete.add(fileP);
-                            for (int j = i + 1; j < files.size(); j++) {
-                                System.out.println("File " + n + ": " + j + "/" + files.size());
-                                secondFileP = files.get(j);
-                                if (!files.get(j).getSeen() && !files.get(j).getToDelete()) {
-                                    boolean cantCompare = false;
-                                    if (fileP.getDate() != null && secondFileP.getDate() != null)
-                                        if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getNano() - secondFileP.getDate().getNano()), TimeUnit.NANOSECONDS) > 1)
-                                            cantCompare = true;
-                                    if (isImage) {
-                                        if (Math.abs(fileP.getProportion() - secondFileP.getProportion()) <= 0.02f && !cantCompare) {
-                                            matrix2 = Imgcodecs.imread(secondFileP.getFile().getAbsolutePath());
-                                            hash2 = getHash(ihb,matrix2,hash2);
-                                            if(hash2!=null) {
-                                                if (100.0 - (ihb.compare(hash1, hash2) * 100.0 / 64.0) >= percentage) {
-                                                    toDelete.add(secondFileP);
-                                                    secondFileP.setSeen(true);
+                    if (type.equals("") || fileP.getFile().getAbsolutePath().contains(type)){
+                        System.out.println("File: " + n);
+                        if (!files.get(i).getSeen() && !files.get(i).getToDelete()) {
+                            if (isImage) {
+                                matrix1 = Imgcodecs.imread(fileP.getFile().getAbsolutePath());
+                                getHash(ihb, matrix1, hash1);
+                            }
+                            if (!isImage || !hash1.empty()) {
+                                toDelete.clear();
+                                toDelete.add(fileP);
+                                int a = 0;
+                                if (type.equals(""))
+                                    a = i + 1;
+
+                                for (int j = a; j < files.size(); j++) {
+                                    System.out.println("File " + n + ": " + j + "/" + files.size());
+                                    secondFileP = files.get(j);
+                                    if (type.equals("") || (!type.equals("") && j != i)){
+                                        if (!files.get(j).getSeen() && !files.get(j).getToDelete()) {
+                                            boolean cantCompare = false;
+                                            if (fileP.getDate() != null && secondFileP.getDate() != null)
+                                                if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getNano() - secondFileP.getDate().getNano()), TimeUnit.NANOSECONDS) > 1)
+                                                    cantCompare = true;
+                                            if (isImage) {
+                                                if (Math.abs(fileP.getProportion() - secondFileP.getProportion()) <= 0.02f && !cantCompare) {
+                                                    matrix2 = Imgcodecs.imread(secondFileP.getFile().getAbsolutePath());
+                                                    getHash(ihb, matrix2, hash2);
+                                                    if (!hash2.empty()) {
+                                                        if (100.0 - (ihb.compare(hash1, hash2) * 100.0 / 64.0) >= percentage) {
+                                                            toDelete.add(secondFileP);
+                                                            if (type.equals(""))
+                                                                secondFileP.setSeen(true);
+                                                        }
+                                                    }
                                                 }
+                                            } else {
+                                                if (!cantCompare)
+                                                    if (isDuplicatedVideo(fileP.getFile(), secondFileP.getFile())) {
+                                                        toDelete.add(secondFileP);
+                                                        if(type.equals(""))
+                                                        secondFileP.setSeen(true);
+                                                    }
                                             }
                                         }
-                                    } else {
-                                        if (!cantCompare)
-                                            if (isDuplicatedVideo(fileP.getFile(), secondFileP.getFile())) {
-                                                toDelete.add(secondFileP);
-                                                secondFileP.setSeen(true);
-                                            }
                                     }
                                 }
+                                System.gc();
+                                chooseToDelete(in, toDelete, files, isImage);
                             }
-                            System.gc();
-                            chooseToDelete(in, toDelete, files, isImage);
                         }
                     }
                 }
@@ -418,7 +453,7 @@ public class Main {
                 if (dateFile != null){
                     String path=gotOrganized(file,folder,String.valueOf(dateFile.getYear()),pathFile,false);
                     if(path!=null)
-                      moved.add(path);
+                        moved.add(path);
                 }else {
                     String path = gotOrganized(file,folder,"Unknown date",pathFile,true);
                     if(path!=null)
