@@ -218,11 +218,12 @@ public class Main {
         return null;
     }
 
-    private static void getHash (ImgHashBase ihb, Mat mat, Mat hash){
+    private static Mat getHash (ImgHashBase ihb, Mat mat, Mat hash){
         try {
             ihb.compute(mat,hash);
+            return mat;
         } catch (CvException e){
-            hash.release();
+            return null;
         }
     }
 
@@ -258,7 +259,7 @@ public class Main {
 
         int n, stage=0;
         FileProperties fileP;
-        Mat mat, hash = new Mat();
+        Mat mat, hash = new Mat(), aux=new Mat();
         List<FileProperties> toDelete = new ArrayList<>();
 
         while(iterator.hasNext()){
@@ -269,11 +270,11 @@ public class Main {
                 if(isImage) {
                     System.out.println("Stage " + stage + ": loading data (this might take a while)");
                     for(FileProperties fp:files){
-                        hash.release();
                         mat = Imgcodecs.imread(fp.getFile().getAbsolutePath());
-                        getHash(ihb,mat,hash);
-                        if(!hash.empty())
+                        hash=getHash(ihb,mat,hash);
+                        if(hash!=null)
                             fp.setHash(hash);
+                        aux.copyTo(hash);
                         mat.release();
                     }
                 }else
@@ -436,15 +437,14 @@ public class Main {
                 LocalDateTime dateFile = getExifDate(file);
                 String[] pathFile = file.getPath().split(folder.getName());
 
+                String path;
                 if (dateFile != null){
-                    String path=gotOrganized(file,folder,String.valueOf(dateFile.getYear()),pathFile,false);
-                    if(path!=null)
-                        moved.add(path);
+                    path = gotOrganized(file, folder, String.valueOf(dateFile.getYear()), pathFile, false);
                 }else {
-                    String path = gotOrganized(file,folder,"Unknown date",pathFile,true);
-                    if(path!=null)
-                        moved.add(path);
+                    path = gotOrganized(file, folder, "Unknown date", pathFile, true);
                 }
+                if(path!=null)
+                    moved.add(path);
             }
         }
         System.out.println(moved.size()+" photos were organized, new paths:");
