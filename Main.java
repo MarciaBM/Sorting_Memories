@@ -218,12 +218,11 @@ public class Main {
         return null;
     }
 
-    private static Mat getHash (ImgHashBase ihb, Mat mat, Mat hash){
+    private static void getHash (ImgHashBase ihb, Mat mat, Mat hash){
         try {
             ihb.compute(mat,hash);
-            return mat;
         } catch (CvException e){
-            return null;
+            hash.create(-1,-1,0);
         }
     }
 
@@ -271,10 +270,9 @@ public class Main {
                     System.out.println("Stage " + stage + ": loading data (this might take a while)");
                     for(FileProperties fp:files){
                         mat = Imgcodecs.imread(fp.getFile().getAbsolutePath());
-                        hash=getHash(ihb,mat,hash);
-                        if(hash!=null)
+                        getHash(ihb,mat,hash);
+                        if(hash.cols()==1)
                             fp.setHash(hash);
-                        aux.copyTo(hash);
                         mat.release();
                     }
                 }else
