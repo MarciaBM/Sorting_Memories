@@ -38,6 +38,23 @@ public class Main {
     private static final float AR1_1 = 1.0f;
     private static final float AR_OTHER = -1.0f;
     private static final float AR6_10 = 0.6f;
+    private static final int MAX_PROGRESS_BAR = 50;
+
+
+    public static String progressBar(int actual ,int maxLength){
+        StringBuilder progressBar = new StringBuilder("[");
+
+        int conversionToScale = (actual * MAX_PROGRESS_BAR) / maxLength;
+
+        String current = "█";
+
+        progressBar.append(current.repeat(Math.max(0, conversionToScale - 1)));
+
+        if(conversionToScale == MAX_PROGRESS_BAR)
+            progressBar.append("]");
+
+        return progressBar + "\r";
+    }
 
     private static String getMimeType(File f)  {
         try {
@@ -49,7 +66,6 @@ public class Main {
             return "";
         }
     }
-
     private static boolean isDuplicatedVideo(File current, File secondFile) {
         String mimeType1=getMimeType(current), mimeType2=getMimeType(secondFile);
         if(!mimeType1.equals(mimeType2))
@@ -271,6 +287,7 @@ public class Main {
                 if(isImage) {
                     System.out.println("Stage " + stage + ": loading data (this might take a while)");
                     for(FileProperties fp:files){
+                        System.out.print(progressBar(files.indexOf(fp), files.size()));
                         mat = Imgcodecs.imread(fp.getFile().getAbsolutePath());
                         fp.setHash(getHash(ihb,mat,fp.getHash()));
                         mat.release();
@@ -287,7 +304,7 @@ public class Main {
                     }
                     fileP = files.get(i);
                     n++;
-                    System.out.println("File: " + n);
+                    System.out.print("\rFile: " + n);
                     if (!fileP.getSeen() && !fileP.getToDelete()) {
                         toDelete.clear();
                         toDelete.add(fileP);
@@ -351,7 +368,7 @@ public class Main {
     private static void chooseToDelete(Scanner in,List<FileProperties> toDelete, List<FileProperties> files, boolean isImage){
         List<JFrame> frames = new ArrayList<>();
         if (toDelete.size() > 1) {
-            System.out.println("Duplicated files have been found, please choose the ones you want to delete (separate them with space):");
+            System.out.println("\nDuplicated files have been found, please choose the ones you want to delete (separate them with space):");
             for (int m = 0; m < toDelete.size(); m++) {
                 int aux = m + 1;
                 System.out.println(aux + ": " + toDelete.get(m).getFile().getAbsolutePath());
