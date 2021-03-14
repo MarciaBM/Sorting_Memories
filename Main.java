@@ -43,12 +43,9 @@ public class Main {
 
     public static String progressBar(int actual ,int maxLength){
         StringBuilder progressBar = new StringBuilder("[");
-
         int conversionToScale = (actual * MAX_PROGRESS_BAR) / maxLength;
 
-        String current = "█";
-
-        progressBar.append(current.repeat(Math.max(0, conversionToScale - 1)));
+        progressBar.append("█".repeat(Math.max(0, conversionToScale - 1)));
 
         if(conversionToScale == MAX_PROGRESS_BAR)
             progressBar.append("]");
