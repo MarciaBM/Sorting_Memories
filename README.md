@@ -42,12 +42,12 @@ Or you can just click on the Code green button and download the .zip file.
 
 . Open your terminal inside the downloaded folder at **script-photos/src** and run:
 ```
-javac -cp metadata-extractor-2.15.0.jar opencv-451.jar Main.java
+javac -cp metadata-extractor-2.15.0.jar:opencv-451.jar Main.java
 ```
 ```
-java -cp metadata-extractor-2.15.0.jar opencv-451.jar Main [path of the folder you want to run the script]
+java -cp metadata-extractor-2.15.0.jar:opencv-451.jar Main [path of the folder you want to run the script]
 ```
-
+In Windows replace : for ;
 And that's it, your running our script, hope you like it and enjoy it!
 
 Credits: Pedro and Márcia
