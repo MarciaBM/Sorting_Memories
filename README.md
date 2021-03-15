@@ -1,4 +1,4 @@
-# Script - Photos Organizer
+# Script - Photos OrganizerClass
 
 [![Downloads](https://img.shields.io/github/downloads/MarciaBM/script-photos/total)]()
 [![Languages](https://img.shields.io/github/languages/top/MarciaBM/script-photos)]()
