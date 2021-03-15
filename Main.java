@@ -38,16 +38,28 @@ public class Main{
     private static final int MAX_PROGRESS_BAR = 50;
 
 
+
     public static String progressBar(int actual ,int maxLength){
-        StringBuilder progressBar = new StringBuilder("[");
+
+        StringBuilder progressBar = new StringBuilder();
+
+        for(var i = 0; i<MAX_PROGRESS_BAR; i++) // set default values
+            if(i==0)
+                progressBar.append("[");
+            else if(i==MAX_PROGRESS_BAR-1)
+                progressBar.append("]");
+            else
+                progressBar.append("-");
+
         int conversionToScale = (actual * MAX_PROGRESS_BAR) / maxLength;
 
-        progressBar.append("█".repeat(Math.max(0, conversionToScale - 1)));
+        progressBar.append("\t"+((conversionToScale*100)/MAX_PROGRESS_BAR)+" % \t");
 
-        if(conversionToScale == MAX_PROGRESS_BAR)
-            progressBar.append("]");
+        for(int x = 0; x < conversionToScale; x++)
+            if (x > 0)
+                progressBar.setCharAt(x, '█');
 
-        return progressBar + "\r";
+        return "\r"+progressBar;
     }
 
     private static String getMimeType(File f)  {
