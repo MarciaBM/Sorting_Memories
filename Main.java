@@ -12,6 +12,7 @@ import javax.imageio.ImageReader;
 import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.ImageInputStream;
 import javax.swing.*;
+import java.applet.Applet;
 import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.io.*;
@@ -25,7 +26,7 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class Main {
+public class Main extends Applet {
 
     private static final int PANEL_HEIGHT = 600;
     private static final float PROPORTION_MARGIN=0.02f;
@@ -293,12 +294,6 @@ public class Main {
                     System.out.println("Videos and others:");
 
                 for (int i = 0; i < files.size() - 1; i++) {
-                    if(i!=0){
-                        if(files.get(i-1).getHash() != null){
-                            files.get(i-1).getHash().release();
-                            files.get(i-1).setHash(null);
-                        }
-                    }
                     fileP = files.get(i);
                     n++;
                     System.out.print("\rFile: " + n);
@@ -355,10 +350,13 @@ public class Main {
             }
         };
         JFrame f = new JFrame();
+        f.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         f.setSize(new Dimension(width, PANEL_HEIGHT));
         f.setTitle(file.getFile().getAbsolutePath());
         f.add(jPanel);
         f.setVisible(true);
+        image.flush();
+
         return f;
     }
 
@@ -395,8 +393,13 @@ public class Main {
                         }
                     }
                 }
-                for (JFrame frame: frames) //close jframe3
-                    frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
+                for (JFrame frame: frames) { //close jframe3
+                    //frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
+                    frame.removeAll();
+                    frame.setVisible(false);
+                    frame.dispose();
+                }
+                frames.clear();
             }
         }
     }
