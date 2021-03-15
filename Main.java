@@ -11,7 +11,6 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.ImageInputStream;
-import javax.swing.*;
 import java.awt.*;
 import java.io.*;
 import java.nio.file.Files;
@@ -26,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 
 public class Main{
 
-    private static final int PANEL_HEIGHT = 600;
     private static final float PROPORTION_MARGIN=0.02f;
     private static final float AR16_9 = (float)16/9;
     private static final float AR9_16 = (float)9/16;
@@ -109,19 +107,6 @@ public class Main{
         return recursiveFileList.iterator();
     }
 
-    private static String getApp(){
-        try {
-            ProcessBuilder processBuilder = new ProcessBuilder();
-            processBuilder.command("xdg-mime","query", "default", "image/jpeg");
-            Process process = processBuilder.start();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line = reader.readLine();
-            return line.split("\\.")[0];
-        } catch (IOException e) {
-            return null;
-        }
-    }
-
     private static Map<Float, List<FileProperties>> populateMapsWithAspectRatio(){
         Map<Float, List<FileProperties>> images = new HashMap<>();
         images.put(AR16_9, new ArrayList<>());
@@ -187,7 +172,7 @@ public class Main{
         String app=null;
 
         if(!System.getProperty("os.name").toLowerCase().contains("win"))
-            app=getApp();
+            app="xdg-open";
 
         System.out.println("WARNING: We will divide the images whole process into 9 stages, so how this is a long process you can execute them separately.\n" +
                 " The files you'll choose to delete will be moved to a folder named 'to delete', this is a security procedure,\n so at the end you will only have to delete the folder." +
@@ -403,8 +388,10 @@ public class Main{
                     }
                 }
             }
-            for (Process p:frames)
-                p.destroy();
+            for (Process p:frames) {
+                if(p!=null)
+                    p.destroy();
+            }
         }
     }
 
