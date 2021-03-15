@@ -12,9 +12,7 @@ import javax.imageio.ImageReader;
 import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.ImageInputStream;
 import javax.swing.*;
-import java.applet.Applet;
 import java.awt.*;
-import java.awt.event.WindowEvent;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,7 +24,7 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class Main extends Applet {
+public class Main{
 
     private static final int PANEL_HEIGHT = 600;
     private static final float PROPORTION_MARGIN=0.02f;
@@ -111,6 +109,19 @@ public class Main extends Applet {
         return recursiveFileList.iterator();
     }
 
+    private static String getApp(){
+        try {
+            ProcessBuilder processBuilder = new ProcessBuilder();
+            processBuilder.command("xdg-mime","query", "default", "image/jpeg");
+            Process process = processBuilder.start();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line = reader.readLine();
+            return line.split("\\.")[0];
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
     private static Map<Float, List<FileProperties>> populateMapsWithAspectRatio(){
         Map<Float, List<FileProperties>> images = new HashMap<>();
         images.put(AR16_9, new ArrayList<>());
@@ -173,11 +184,16 @@ public class Main extends Applet {
         Map<Float, List<FileProperties>> images = populateMapsWithAspectRatio();
         Map<Long, List<FileProperties>> videos = new HashMap<>();
         int sumVideos=0;
+        String app=null;
+
+        if(!System.getProperty("os.name").toLowerCase().contains("win"))
+            app=getApp();
 
         System.out.println("WARNING: We will divide the images whole process into 9 stages, so how this is a long process you can execute them separately.\n" +
                 " The files you'll choose to delete will be moved to a folder named 'to delete', this is a security procedure,\n so at the end you will only have to delete the folder." +
                 " If you already have a folder with this name please rename it.");
         System.out.println("Loading files...");
+
         for(File f:folder.listFiles()) {
             Iterator<File> it = getFile(f, new ArrayList<>());
             while (it.hasNext()) {
@@ -206,9 +222,9 @@ public class Main extends Applet {
         }
         List<Integer> result=printStages(in,images.values().iterator(),sumVideos);
         int percentage=getPercentage(in);
-        deleteDuplicatedFiles(in,images.values().iterator(),result,folder,true,percentage,ihb);
+        deleteDuplicatedFiles(in,images.values().iterator(),result,folder,true,percentage,ihb, app);
         if(!System.getProperty("os.name").toLowerCase().contains("win") && (result.contains(-1) || result.contains(-2)))
-            deleteDuplicatedFiles(in,videos.values().iterator(),result,folder,false,percentage,ihb);
+            deleteDuplicatedFiles(in,videos.values().iterator(),result,folder,false,percentage,ihb,null);
     }
 
     public static Dimension getImageDimension(File imgFile){
@@ -270,7 +286,8 @@ public class Main extends Applet {
         }
     }
 
-    private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator, List<Integer> stages, File folder,boolean isImage,int percentage, ImgHashBase ihb){
+    private static void deleteDuplicatedFiles(Scanner in,Iterator<List<FileProperties>> iterator, List<Integer> stages,
+                                              File folder,boolean isImage,int percentage, ImgHashBase ihb, String app){
 
         int n, stage=0;
         FileProperties fileP;
@@ -302,7 +319,7 @@ public class Main extends Applet {
                         toDelete.add(fileP);
                         for (int j = i+1; j < files.size(); j++)
                             deleteDuplicatedFiles2(files,fileP,isImage, percentage,j,toDelete,ihb);
-                        chooseToDelete(in, toDelete, files, isImage);
+                        chooseToDelete(in, toDelete, files, isImage, app);
                         System.gc();
                     }
 
@@ -339,36 +356,28 @@ public class Main extends Applet {
         }
     }
 
-    private static JFrame getPicture(FileProperties file){
-        int width = (int)(file.getDimension().getWidth()*PANEL_HEIGHT/file.getDimension().getHeight());
-        Image image = new ImageIcon(file.getFile().getAbsolutePath()).getImage();
-        JPanel jPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                g.drawImage(image, 0, 0, width, PANEL_HEIGHT,this);
-            }
-        };
-        JFrame f = new JFrame();
-        f.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        f.setSize(new Dimension(width, PANEL_HEIGHT));
-        f.setTitle(file.getFile().getAbsolutePath());
-        f.add(jPanel);
-        f.setVisible(true);
-        image.flush();
-
-        return f;
+    private static Process showPicture(String app, FileProperties fp){
+        try {
+            ProcessBuilder processBuilder = new ProcessBuilder();
+            if(app==null)
+                processBuilder.command(fp.getFile().getAbsolutePath());
+            else
+                processBuilder.command(app,fp.getFile().getAbsolutePath());
+            return processBuilder.start();
+        } catch (IOException e) {
+            return null;
+        }
     }
 
-    private static void chooseToDelete(Scanner in,List<FileProperties> toDelete, List<FileProperties> files, boolean isImage){
-        List<JFrame> frames = new ArrayList<>();
+    private static void chooseToDelete(Scanner in,List<FileProperties> toDelete, List<FileProperties> files, boolean isImage, String app){
+        List<Process> frames = new ArrayList<>();
         if (toDelete.size() > 1) {
             System.out.println("\nDuplicated files have been found, please choose the ones you want to delete (separate them with space):");
             for (int m = 0; m < toDelete.size(); m++) {
                 int aux = m + 1;
                 System.out.println(aux + ": " + toDelete.get(m).getFile().getAbsolutePath());
                 if(isImage)
-                    frames.add(getPicture(toDelete.get(m)));
+                    frames.add(showPicture(app,toDelete.get(m)));
             }
             System.out.println("K: Keep them all");
             System.out.println("D: Delete them all");
@@ -393,14 +402,9 @@ public class Main extends Applet {
                         }
                     }
                 }
-                for (JFrame frame: frames) { //close jframe3
-                    //frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
-                    frame.removeAll();
-                    frame.setVisible(false);
-                    frame.dispose();
-                }
-                frames.clear();
             }
+            for (Process p:frames)
+                p.destroy();
         }
     }
 
