@@ -67,6 +67,33 @@ public class Main{
         }
     }
 
+    private static void chooseImagesApp(Scanner in, DuplicatedFiles df) throws IOException {
+        df.permissionApp();
+        Iterator<String> it = df.apps();
+        List<String> list=new ArrayList<>();
+        System.out.println("Please choose an application to open pictures\n(if the photos don't show up reboot the program and choose another app):");
+        int counter=0;
+        while (it.hasNext()){
+            String app = it.next().split("\\.desktop")[0];
+            if(!app.equals("")) {
+                counter++;
+                list.add(app);
+                System.out.println("[" + counter + "] - " + app);
+            }
+        }
+        boolean accepted=false;
+        while(!accepted) {
+            String answer = in.nextLine().trim();
+            if (answer.matches("[1-9]")) {
+                int choice = Integer.parseInt(answer);
+                if(choice>0 && choice<=list.size()) {
+                    accepted = true;
+                    df.setApp(list.get(choice-1));
+                }
+            }
+        }
+    }
+
     private static void iteratingMaps(Scanner in, DuplicatedFiles df,
                                       int percentage) throws IOException {
         int n, stage=0;
@@ -143,11 +170,13 @@ public class Main{
         System.out.println("Loading files...");
         int sumVideos=df.deleteDuplicatedFiles();
         printStages(in,df,sumVideos);
-        int percentage=getPercentage(in);
-        if(df.getStagesSize()>0)
-            iteratingMaps(in,df,percentage);
-        else if(!df.getIsWindows())
-            iteratingMaps(in,df,percentage);
+
+        if(df.getIsImage()) {
+            if(!df.getIsWindows())
+                chooseImagesApp(in,df);
+            iteratingMaps(in, df, getPercentage(in));
+        }else if(!df.getIsWindows() && !df.getIsImage())
+            iteratingMaps(in,df,-1);
 
     }
 

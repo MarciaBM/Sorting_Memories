@@ -31,6 +31,8 @@ public interface DuplicatedFiles {
 
     String getApp();
 
+    void setApp(String app);
+
     int deleteDuplicatedFiles();
 
     Dimension getImageDimension(File imgFile);
@@ -39,6 +41,10 @@ public interface DuplicatedFiles {
 
     boolean compareFiles(List<FileProperties> files, FileProperties fileP,
                          int percentage, int j);
+
+    void permissionApp() throws IOException;
+
+    Iterator<String> apps() throws IOException;
 
     void deleteFiles();
 

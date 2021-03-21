@@ -39,11 +39,13 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
     private boolean isImage;
     private final List<Integer> stages;
     private final List<FileProperties> toDelete;
+    private String app;
 
 
     public DuplicatedFilesClass(File root){
         loadLib();
         this.root=root;
+        app=null;
         ihb=AverageHash.create();
         videos = new HashMap<>();
         images = new HashMap<>();
@@ -188,10 +190,12 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
 
     @Override
     public String getApp(){
-        String app=null;
-        if(!isWindows)
-            app="xdg-open";
         return app;
+    }
+
+    @Override
+    public void setApp(String app){
+        this.app=app;
     }
 
     @Override
@@ -299,14 +303,35 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
         return found;
     }
 
+    @Override
+    public void permissionApp() throws IOException {
+        ProcessBuilder processBuilder = new ProcessBuilder();
+        processBuilder.command("chmod", "+x", "getApps.sh");
+        processBuilder.start();
+    }
+
+    @Override
+    public Iterator<String> apps() throws IOException {
+        ProcessBuilder processBuilder = new ProcessBuilder();
+        processBuilder.command("./getApps.sh");
+        Process process = processBuilder.start();
+        String line;
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        List<String> result = new ArrayList<>();
+
+        while ((line = reader.readLine()) != null)
+            result.add(line);
+
+        return result.iterator();
+    }
+
     private Process showPicture(FileProperties fp){
-        //TODO aquiiiiiiiii
         try {
             ProcessBuilder processBuilder = new ProcessBuilder();
             if(getApp()==null)
-                processBuilder.command(fp.getFile().getAbsolutePath());
+                Runtime.getRuntime().exec(fp.getFile().getAbsolutePath());
             else
-                processBuilder.command(getApp(),fp.getFile().getAbsolutePath());
+                processBuilder.command(app,fp.getFile().getAbsolutePath());
             return processBuilder.start();
         } catch (IOException e) {
             return null;
@@ -331,16 +356,13 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
     @Override
     public void stopProcesses() throws IOException {
         for (Process p: processes ) {
-            if(p!=null) {
-                //p.destroy();
-                if(isWindows)
-                    Runtime.getRuntime().exec("taskkill " + p.pid());
-                else
-                    Runtime.getRuntime().exec("kill -9 " +p.pid());
-            }
+            if(p!=null)
+                p.destroy();
         }
         processes.clear();
         toDelete.clear();
+        if(!isWindows)
+            Runtime.getRuntime().exec("pkill " +app);
     }
 
     @Override
