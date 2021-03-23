@@ -175,7 +175,7 @@ public class Main{
             if(!df.getIsWindows())
                 chooseImagesApp(in,df);
             iteratingMaps(in, df, getPercentage(in));
-        }else if(!df.getIsWindows() && !df.getIsImage())
+        }else
             iteratingMaps(in,df,-1);
 
     }
