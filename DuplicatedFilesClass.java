@@ -162,7 +162,7 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
         try {
             ProcessBuilder processBuilder = new ProcessBuilder();
             if(isWindows)
-                processBuilder.command("FC","/B",current.getAbsolutePath(), secondFile.getAbsolutePath());
+                processBuilder.command("fc","/b",current.getAbsolutePath(), secondFile.getAbsolutePath());
             else
                 processBuilder.command("diff", current.getAbsolutePath(), secondFile.getAbsolutePath());
             Process process = processBuilder.start();
@@ -174,7 +174,7 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
                 result.add(line);
 
             if(isWindows)
-                return Integer.parseInt(result.get(0))==0;
+                return result.get(1).contains("no differences encountered");
             return result.size() == 0;
         } catch (IOException e) {
             return false;
