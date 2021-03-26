@@ -43,6 +43,7 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
 
 
     public DuplicatedFilesClass(File root){
+        isWindows= System.getProperty("os.name").toLowerCase().contains("win");
         loadLib();
         this.root=root;
         app=null;
@@ -62,7 +63,6 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
         images.put(AR1_1, new ArrayList<>());
         images.put(AR_OTHER, new ArrayList<>());
 
-        isWindows= System.getProperty("os.name").toLowerCase().contains("win");
     }
 
     @Override
@@ -333,9 +333,12 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
     private Process showPicture(FileProperties fp){
         try {
             ProcessBuilder processBuilder = new ProcessBuilder();
-            if(getApp()==null)
-                Runtime.getRuntime().exec(fp.getFile().getAbsolutePath());
-            else
+            if(getApp()==null){
+                String expr = "rundll32 \"C:\\Program Files (x86)\\Windows Photo Viewer\\PhotoViewer.dll\", ImageView_Fullscreen " + fp.getFile().getAbsolutePath();
+                Runtime.getRuntime().exec(expr);
+                //processBuilder.command(fp.getFile().getAbsolutePath());
+                return null;
+            }else
                 processBuilder.command(app,fp.getFile().getAbsolutePath());
             return processBuilder.start();
         } catch (IOException e) {
@@ -346,12 +349,20 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
     @Override
     public void deleteFiles(){
         boolean found = false;
-        for (FileProperties key : toDelete) {
-            if (key.getToDelete()) {
-                String toDeletePath=root+File.separator+"to delete";
-                new File(toDeletePath).mkdirs(); //create folders
-                key.getFile().renameTo(new File(toDeletePath+File.separator+key.getFile().getName()));
-                found=true;
+        Iterator<List<FileProperties>> it;
+        if(isImage)
+            it=images.values().iterator();
+        else
+            it=videos.values().iterator();
+        while(it.hasNext()) {
+            List<FileProperties> list = it.next();
+            for (FileProperties key :list) {
+                if (key.getToDelete()) {
+                    String toDeletePath = root + File.separator + "to delete";
+                    new File(toDeletePath).mkdirs(); //create folders
+                    key.getFile().renameTo(new File(toDeletePath + File.separator + key.getFile().getName()));
+                    found = true;
+                }
             }
         }
         if(!found)
@@ -365,9 +376,13 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
                 p.destroy();
         }
         processes.clear();
-        toDelete.clear();
         if(!isWindows)
             Runtime.getRuntime().exec("pkill " +app);
+        else{
+            for(FileProperties fp : toDelete)
+                Runtime.getRuntime().exec("taskkill /f /fi \"WINDOWTITLE eq "+fp.getFile().getName()+"*\" /t");
+        }
+        toDelete.clear();
     }
 
     @Override
