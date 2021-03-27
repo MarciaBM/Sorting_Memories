@@ -378,7 +378,10 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
         }
         processes.clear();
         if (!isWindows)
-            Runtime.getRuntime().exec("pkill " + app);
+            if (System.getProperty("os.name").toLowerCase().contains("mac"))
+                Runtime.getRuntime().exec("killall Preview");
+            else
+                Runtime.getRuntime().exec("pkill " + app);
         else {
             for (FileProperties fp : toDelete)
                 Runtime.getRuntime().exec("taskkill /f /fi \"WINDOWTITLE eq " + fp.getFile().getName() + "*\" /t");
