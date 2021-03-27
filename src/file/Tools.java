@@ -32,18 +32,18 @@ public class Tools {
     }
 
     public static Iterator<File> getFile(File file, List<File> recursiveFileList) {
-        if(file.isFile()) {
+        if (file.isFile()) {
             recursiveFileList.add(file);
-        }else{
-            for(File f:file.listFiles())
-                getFile(f,recursiveFileList);
+        } else {
+            for (File f : file.listFiles())
+                getFile(f, recursiveFileList);
         }
         return recursiveFileList.iterator();
     }
 
     public static int deleteEmptyFolders(File folder, int counter) {
         if (folder.isDirectory()) {
-            if(folder.listFiles().length > 0) {
+            if (folder.listFiles().length > 0) {
                 File[] folders = folder.listFiles();
                 for (File insideFolder : folders) {
                     counter = deleteEmptyFolders(insideFolder, counter);

@@ -6,49 +6,49 @@ import java.io.File;
 import java.time.LocalDateTime;
 
 public class FilePropertiesClass implements FileProperties {
-    private boolean toDelete;
-    private boolean seen;
     private final File file;
     private final LocalDateTime date;
-    private Mat hash;
     private final float proportion;
+    private boolean toDelete;
+    private boolean seen;
+    private Mat hash;
 
     public FilePropertiesClass(File file, boolean toDelete, boolean seen, float proportion, LocalDateTime date, Mat hash) {
         this.seen = seen;
         this.toDelete = toDelete;
-        this.file=file;
-        this.date=date;
-        this.hash=hash;
-        this.proportion=proportion;
+        this.file = file;
+        this.date = date;
+        this.hash = hash;
+        this.proportion = proportion;
     }
 
     @Override
-    public boolean getToDelete(){
+    public boolean getToDelete() {
         return toDelete;
     }
 
     @Override
-    public boolean getSeen(){
-        return seen;
-    }
-
-    @Override
-    public void setToDelete(boolean toDelete){
+    public void setToDelete(boolean toDelete) {
         this.toDelete = toDelete;
     }
 
     @Override
-    public void setSeen(boolean seen){
+    public boolean getSeen() {
+        return seen;
+    }
+
+    @Override
+    public void setSeen(boolean seen) {
         this.seen = seen;
     }
 
     @Override
-    public File getFile(){
+    public File getFile() {
         return file;
     }
 
     @Override
-    public float getProportion(){
+    public float getProportion() {
         return proportion;
     }
 
@@ -58,12 +58,12 @@ public class FilePropertiesClass implements FileProperties {
     }
 
     @Override
-    public Mat getHash(){
+    public Mat getHash() {
         return hash;
     }
 
     @Override
-    public void setHash(Mat hash){
-        this.hash=hash;
+    public void setHash(Mat hash) {
+        this.hash = hash;
     }
 }

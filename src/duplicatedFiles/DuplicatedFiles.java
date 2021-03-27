@@ -19,9 +19,9 @@ public interface DuplicatedFiles {
 
     boolean getIsWindows();
 
-    void setIsImage(boolean b);
-
     boolean getIsImage();
+
+    void setIsImage(boolean b);
 
     void addProcess(FileProperties fp);
 
