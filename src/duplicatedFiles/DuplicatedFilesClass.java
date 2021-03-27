@@ -184,11 +184,11 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
     private void loadLib(){
         File lib = null;
         if(isWindows)
-            lib=new File("libs/opencv_java451.dll");
+            lib=new File("libs"+File.separator+"opencv_java451.dll");
         else if(System.getProperty("os.name").toLowerCase().contains("mac"))
-            System.out.println("libs/libopencv_java440.dylib");
+            System.out.println("libs"+File.separator+"libopencv_java440.dylib");
         else
-            lib=new File("libs/libopencv_java451.so");
+            lib=new File("libs"+File.separator+"libopencv_java451.so");
 
         System.load(lib.getAbsolutePath());
     }
