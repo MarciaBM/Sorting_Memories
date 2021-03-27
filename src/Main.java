@@ -58,7 +58,7 @@ public class Main{
         boolean accepted=false;
         while(!accepted) {
             String choice = in.nextLine().trim();
-            if (choice.matches("[1-9 ]+|A|V")){
+            if (choice.matches("[1-9 ]+|A|V|a|v")){
                 accepted=true;
                 if(choice.equalsIgnoreCase("A")) {
                     df.setIsImage(true);
@@ -179,8 +179,12 @@ public class Main{
         printStages(in,df,sumVideos);
 
         if(df.getIsImage()) {
-            if(!df.getIsWindows())
-                chooseImagesApp(in,df);
+            if(!df.getIsWindows()){
+                if(System.getProperty("os.name").toLowerCase().contains("mac"))
+                    df.setApp("open");
+                else
+                    chooseImagesApp(in,df);
+            }
             iteratingMaps(in, df, getPercentage(in));
         }else
             iteratingMaps(in,df,-1);
