@@ -17,19 +17,15 @@ public interface DuplicatedFiles {
 
     void addToToDelete(FileProperties fp);
 
-    boolean getIsWindows();
+    OSType getOSType();
 
     boolean getIsImage();
 
     void setIsImage(boolean b);
 
-    void addProcess(FileProperties fp);
-
     void addStage(int stage);
 
     boolean hasStage(int stage);
-
-    String progressBar(int actual, int maxLength);
 
     String getApp();
 
@@ -48,9 +44,11 @@ public interface DuplicatedFiles {
 
     Iterator<String> apps() throws IOException;
 
+    void showPicture(FileProperties fp);
+
     void deleteFiles();
 
-    void stopProcesses() throws IOException;
+    void closePreviews() throws IOException;
 
     boolean analyzeAnswer(String answer);
 }

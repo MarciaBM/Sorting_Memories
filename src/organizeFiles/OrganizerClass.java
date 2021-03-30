@@ -1,6 +1,7 @@
 package organizeFiles;
 
 import file.Tools;
+
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -11,29 +12,34 @@ import java.util.List;
 
 public class OrganizerClass implements Organizer {
 
+    private static final String NOT_ORGANIZE = "not organize";
+    private static final String LEFT_SLASH = "\\\\";
+    private static final String RIGHT_SLASH = "/";
+    private static final String UNKNOWN_DATE = "Unknown date";
+
     private final File root;
 
-    public OrganizerClass(File root){
-        this.root=root;
+    public OrganizerClass(File root) {
+        this.root = root;
     }
 
-    private boolean isNameFolderAYear(String nameFolder){
+    private boolean isNameFolderAYear(String nameFolder) {
         try {
             int year = Integer.parseInt(nameFolder);
-            if(year>=1800 && year<= LocalDateTime.now().getYear())
+            if (year >= 1800 && year <= LocalDateTime.now().getYear())
                 return true;
-        }catch(NumberFormatException e){
+        } catch (NumberFormatException e) {
             return false;
         }
         return false;
     }
 
-    private String gotOrganized(File file, String folderName, String[] pathFile, boolean isDateNull){
-        if(!file.getAbsolutePath().contains(root.getAbsolutePath() + File.separator + folderName+File.separator) &&
-                !file.getAbsolutePath().contains(root.getAbsolutePath() + File.separator + "not organize"+File.separator)){
+    private String gotOrganized(File file, String folderName, String[] pathFile, boolean isDateNull) {
+        if (!file.getAbsolutePath().contains(root.getAbsolutePath() + File.separator + folderName + File.separator) &&
+                !file.getAbsolutePath().contains(root.getAbsolutePath() + File.separator + NOT_ORGANIZE + File.separator)) {
             Path concatenatedPath = getConcatenatedPath(pathFile, root.getName(), folderName);
-            pathFile[1]=pathFile[1].replaceAll("\\\\","/");
-            if(!isDateNull || !isNameFolderAYear(pathFile[1].split("/")[1])) {
+            pathFile[1] = pathFile[1].replaceAll(LEFT_SLASH, RIGHT_SLASH);
+            if (!isDateNull || !isNameFolderAYear(pathFile[1].split(RIGHT_SLASH)[1])) {
                 String finalPath = concatenatedPath.getParent().toString();
                 if (finalPath != null) {
                     new File(finalPath).mkdirs(); //create folders
@@ -47,7 +53,7 @@ public class OrganizerClass implements Organizer {
 
     @Override
     public Iterator<String> organizeFiles() {
-        List<String> moved=new ArrayList<>();
+        List<String> moved = new ArrayList<>();
         for (File f : root.listFiles()) {
             Iterator<File> it = Tools.getFile(f, new ArrayList<>());
             while (it.hasNext()) {
@@ -56,12 +62,12 @@ public class OrganizerClass implements Organizer {
                 String[] pathFile = file.getPath().split(root.getName());
 
                 String path;
-                if (dateFile != null){
+                if (dateFile != null) {
                     path = gotOrganized(file, String.valueOf(dateFile.getYear()), pathFile, false);
-                }else {
-                    path = gotOrganized(file, "Unknown date", pathFile, true);
+                } else {
+                    path = gotOrganized(file, UNKNOWN_DATE, pathFile, true);
                 }
-                if(path!=null)
+                if (path != null)
                     moved.add(path);
             }
         }

@@ -34,29 +34,45 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
     private static final float AR1_1 = 1.0f;
     private static final float AR_OTHER = -1.0f;
     private static final float AR6_10 = 0.6f;
-    private static final int MAX_PROGRESS_BAR = 50;
+    private static final String OS_NAME = "os.name";
+    private static final String WINDOWS = "windows";
+    private static final String MACOS = "mac";
+    private static final String RIGHT_SLASH = "/";
+    private static final String PATH_LIBS = "libs";
+    private static final String LIB_WIN = "opencv_java451.dll";
+    private static final String LIB_MACOS = "libopencv_java440.dylib";
+    private static final String LIB_LINUX = "libopencv_java451.so";
+    private static final String NO_DIFF="no differences encountered";
+    private static final String KILL_WIN="taskkill /f /fi \"WINDOWTITLE eq ";
+    private static final String KILL_MACOS="killall Preview";
+    private static final String KILL_LINUX="pkill ";
+    private static final String IMAGE_WIN="rundll32 \"C:\\Program Files (x86)\\Windows Photo Viewer\\PhotoViewer.dll\", ImageView_Fullscreen ";
+    private static final String NO_DUPLICATED_FILES="There aren't any duplicated files";
+    private static final String TO_DELETE="to delete";
+    private static final String GET_APPS_SCRIPT="getApps.sh";
+    private static final String DIFF="diff";
+    private static final String DIFF_WIN="fc";
+    private static final String IMAGE="image";
 
     private final ImgHashBase ihb;
     private final Map<Float, List<FileProperties>> images;
     private final Map<Long, List<FileProperties>> videos;
     private final File root;
-    private final boolean isWindows;
-    private final List<Process> processes;
     private final List<Integer> stages;
     private final List<FileProperties> toDelete;
+    private OSType osType;
     private boolean isImage;
     private String app;
 
 
     public DuplicatedFilesClass(File root) {
-        isWindows = System.getProperty("os.name").toLowerCase().contains("win");
-        loadLib();
         this.root = root;
+        defineOS();
+        loadLib();
         app = null;
         ihb = AverageHash.create();
         videos = new HashMap<>();
         images = new HashMap<>();
-        processes = new LinkedList<>();
         stages = new ArrayList<>();
         toDelete = new LinkedList<>();
         images.put(AR16_9, new ArrayList<>());
@@ -69,6 +85,15 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
         images.put(AR1_1, new ArrayList<>());
         images.put(AR_OTHER, new ArrayList<>());
 
+    }
+
+    private void defineOS() {
+        if (System.getProperty(OS_NAME).toLowerCase().contains(WINDOWS))
+            osType = OSType.WINDOWS;
+        else if (System.getProperty(OS_NAME).toLowerCase().contains(MACOS))
+            osType = OSType.MACOS;
+        else
+            osType = OSType.LINUX;
     }
 
     @Override
@@ -92,8 +117,8 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
     }
 
     @Override
-    public boolean getIsWindows() {
-        return isWindows;
+    public OSType getOSType() {
+        return osType;
     }
 
     @Override
@@ -107,12 +132,6 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
     }
 
     @Override
-    public void addProcess(FileProperties fp) {
-        if (isImage)
-            processes.add(showPicture(fp));
-    }
-
-    @Override
     public void addStage(int stage) {
         stages.add(stage);
     }
@@ -122,35 +141,12 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
         return stages.contains(stage);
     }
 
-    @Override
-    public String progressBar(int actual, int maxLength) {
-        StringBuilder progressBar = new StringBuilder();
-
-        for (var i = 0; i < MAX_PROGRESS_BAR; i++) // set default values
-            if (i == 0)
-                progressBar.append("[");
-            else if (i == MAX_PROGRESS_BAR - 1)
-                progressBar.append("]");
-            else
-                progressBar.append("-");
-
-        int conversionToScale = (actual * MAX_PROGRESS_BAR) / maxLength;
-
-        progressBar.append("\t" + ((conversionToScale * 100) / MAX_PROGRESS_BAR) + " % \t");
-
-        for (int x = 0; x < conversionToScale; x++)
-            if (x > 0)
-                progressBar.setCharAt(x, '█');
-
-        return "\r" + progressBar;
-    }
-
     private String getMimeType(File f) {
         try {
             String mimetype = Files.probeContentType(f.toPath());
             if (mimetype == null)
                 return "";
-            return (mimetype.split("/")[0]);
+            return (mimetype.split(RIGHT_SLASH)[0]);
         } catch (IOException e) {
             return "";
         }
@@ -162,20 +158,13 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
             return false;
         try {
             ProcessBuilder processBuilder = new ProcessBuilder();
-            if (isWindows)
-                processBuilder.command("fc", "/b", current.getAbsolutePath(), secondFile.getAbsolutePath());
+            if (osType == OSType.WINDOWS)
+                processBuilder.command(DIFF_WIN, "/b", current.getAbsolutePath(), secondFile.getAbsolutePath());
             else
-                processBuilder.command("diff", current.getAbsolutePath(), secondFile.getAbsolutePath());
-            Process process = processBuilder.start();
-            String line;
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            List<String> result = new ArrayList<>();
-
-            while ((line = reader.readLine()) != null)
-                result.add(line);
-
-            if (isWindows)
-                return result.get(1).contains("no differences encountered");
+                processBuilder.command(DIFF, current.getAbsolutePath(), secondFile.getAbsolutePath());
+            List<String> result = runProcess(processBuilder);
+            if (osType == OSType.WINDOWS)
+                return result.get(1).contains(NO_DIFF);
             return result.size() == 0;
         } catch (IOException e) {
             return false;
@@ -184,12 +173,12 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
 
     private void loadLib() {
         File lib;
-        if (isWindows)
-            lib = new File("libs" + File.separator + "opencv_java451.dll");
-        else if (System.getProperty("os.name").toLowerCase().contains("mac"))
-            lib = new File("libs" + File.separator + "libopencv_java440.dylib");
+        if (osType == OSType.WINDOWS)
+            lib = new File(PATH_LIBS + File.separator + LIB_WIN);
+        else if (osType == OSType.MACOS)
+            lib = new File(PATH_LIBS + File.separator + LIB_MACOS);
         else
-            lib = new File("libs" + File.separator + "libopencv_java451.so");
+            lib = new File(PATH_LIBS + File.separator + LIB_LINUX);
 
         System.load(lib.getAbsolutePath());
     }
@@ -212,7 +201,7 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
             Iterator<File> it = Tools.getFile(f, new ArrayList<>());
             while (it.hasNext()) {
                 File file = it.next();
-                if (getMimeType(file).equals("image")) {
+                if (getMimeType(file).equals(IMAGE)) {
                     Dimension d = getImageDimension(file);
                     if (d != null) {
                         float proportion = (float) d.height / (float) d.width, valueInMap = AR_OTHER;
@@ -312,14 +301,11 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
     @Override
     public void permissionApp() throws IOException {
         ProcessBuilder processBuilder = new ProcessBuilder();
-        processBuilder.command("chmod", "+x", "getApps.sh");
+        processBuilder.command("chmod", "+x", GET_APPS_SCRIPT);
         processBuilder.start();
     }
 
-    @Override
-    public Iterator<String> apps() throws IOException {
-        ProcessBuilder processBuilder = new ProcessBuilder();
-        processBuilder.command("./getApps.sh");
+    private List<String> runProcess(ProcessBuilder processBuilder) throws IOException{
         Process process = processBuilder.start();
         String line;
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -327,23 +313,30 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
 
         while ((line = reader.readLine()) != null)
             result.add(line);
-
-        return result.iterator();
+        return result;
     }
 
-    private Process showPicture(FileProperties fp) {
+    @Override
+    public Iterator<String> apps() throws IOException {
+        ProcessBuilder processBuilder = new ProcessBuilder();
+        processBuilder.command("./"+GET_APPS_SCRIPT);
+        return runProcess(processBuilder).iterator();
+    }
+
+    @Override
+    public void showPicture(FileProperties fp) {
         try {
-            ProcessBuilder processBuilder = new ProcessBuilder();
-            if (getApp() == null) {
-                String expr = "rundll32 \"C:\\Program Files (x86)\\Windows Photo Viewer\\PhotoViewer.dll\", ImageView_Fullscreen " + fp.getFile().getAbsolutePath();
-                Runtime.getRuntime().exec(expr);
-                //processBuilder.command(fp.getFile().getAbsolutePath());
-                return null;
-            } else
-                processBuilder.command(app, fp.getFile().getAbsolutePath());
-            return processBuilder.start();
-        } catch (IOException e) {
-            return null;
+            if(isImage) {
+                if (getApp() == null) {
+                    String expr = IMAGE_WIN + fp.getFile().getAbsolutePath();
+                    Runtime.getRuntime().exec(expr);
+                } else {
+                    ProcessBuilder processBuilder = new ProcessBuilder();
+                    processBuilder.command(app, fp.getFile().getAbsolutePath());
+                    processBuilder.start();
+                }
+            }
+        } catch (IOException ignored) {
         }
     }
 
@@ -359,7 +352,7 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
             List<FileProperties> list = it.next();
             for (FileProperties key : list) {
                 if (key.getToDelete()) {
-                    String toDeletePath = root + File.separator + "to delete";
+                    String toDeletePath = root + File.separator + TO_DELETE;
                     new File(toDeletePath).mkdirs(); //create folders
                     key.getFile().renameTo(new File(toDeletePath + File.separator + key.getFile().getName()));
                     found = true;
@@ -367,24 +360,18 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
             }
         }
         if (!found)
-            System.out.println("There aren't any duplicated files");
+            System.out.println(NO_DUPLICATED_FILES);
     }
 
     @Override
-    public void stopProcesses() throws IOException {
-        for (Process p : processes) {
-            if (p != null)
-                p.destroy();
-        }
-        processes.clear();
-        if (!isWindows)
-            if (System.getProperty("os.name").toLowerCase().contains("mac"))
-                Runtime.getRuntime().exec("killall Preview");
-            else
-                Runtime.getRuntime().exec("pkill " + app);
+    public void closePreviews() throws IOException {
+        if (osType == OSType.MACOS)
+            Runtime.getRuntime().exec(KILL_MACOS);
+        else if (osType == OSType.LINUX)
+            Runtime.getRuntime().exec(KILL_LINUX + app);
         else {
             for (FileProperties fp : toDelete)
-                Runtime.getRuntime().exec("taskkill /f /fi \"WINDOWTITLE eq " + fp.getFile().getName() + "*\" /t");
+                Runtime.getRuntime().exec(KILL_WIN + fp.getFile().getName() + "*\" /t");
         }
         toDelete.clear();
     }
