@@ -1,8 +1,6 @@
 package duplicatedFiles;
 
-import file.FileProperties;
-import file.FilePropertiesClass;
-import file.Tools;
+import file.*;
 import org.opencv.core.CvException;
 import org.opencv.core.Mat;
 import org.opencv.img_hash.AverageHash;
@@ -211,7 +209,7 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
                             if (Math.abs(proportion - aR) <= PROPORTION_MARGIN)
                                 valueInMap = aR;
 
-                        images.get(valueInMap).add(new FilePropertiesClass(file, false, false, proportion, Tools.getExifDate(file), new Mat()));
+                        images.get(valueInMap).add(new ImagePropertiesClass(file, false, false, proportion, Tools.getExifDate(file), new Mat()));
 
                     }
                 } else if (!getMimeType(file).equals("")) {
@@ -219,7 +217,7 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
                     long size = file.length();
                     if (!videos.containsKey(size))
                         videos.put(size, new ArrayList<>());
-                    videos.get(size).add(new FilePropertiesClass(file, false, false, -1.0f, Tools.getExifDate(file), null));
+                    videos.get(size).add(new VideoPropertiesClass(file, false, false, Tools.getExifDate(file)));
                 }
             }
         }
@@ -260,10 +258,13 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
 
     @Override
     public void definingHash(FileProperties fp) {
-        Mat mat;
-        mat = Imgcodecs.imread(fp.getFile().getAbsolutePath());
-        fp.setHash(getHash(mat, fp.getHash()));
-        mat.release();
+        if(fp instanceof ImageProperties) {
+            ImageProperties ip = (ImageProperties) fp;
+            Mat mat;
+            mat = Imgcodecs.imread(fp.getFile().getAbsolutePath());
+            ip.setHash(getHash(mat, ip.getHash()));
+            mat.release();
+        }
     }
 
     @Override
@@ -276,10 +277,12 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
             if (fileP.getDate() != null && secondFileP.getDate() != null)
                 if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getNano() - secondFileP.getDate().getNano()), TimeUnit.NANOSECONDS) > 1)
                     cantCompare = true;
-            if (isImage) {
-                if (Math.abs(fileP.getProportion() - secondFileP.getProportion()) <= 0.02f && !cantCompare) {
-                    if (secondFileP.getHash() != null && fileP.getHash() != null) {
-                        if (100.0 - (ihb.compare(fileP.getHash(), secondFileP.getHash()) * 100.0 / 64.0) >= percentage) {
+            if (isImage && fileP instanceof ImageProperties && secondFileP instanceof ImageProperties) {
+                ImageProperties ip1 = (ImageProperties) fileP;
+                ImageProperties ip2 = (ImageProperties) secondFileP;
+                if (Math.abs(ip1.getProportion() - ip2.getProportion()) <= 0.02f && !cantCompare) {
+                    if (ip2.getHash() != null && ip1.getHash() != null) {
+                        if (100.0 - (ihb.compare(ip1.getHash(), ip2.getHash()) * 100.0 / 64.0) >= percentage) {
                             found = true;
                             toDelete.add(secondFileP);
                             secondFileP.setSeen(true);
@@ -364,7 +367,7 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
     }
 
     @Override
-    public void closePreviews() throws IOException {
+    public void closePreviews() throws IOException, InterruptedException {
         if (osType == OSType.MACOS)
             Runtime.getRuntime().exec(KILL_MACOS);
         else if (osType == OSType.LINUX)
@@ -374,6 +377,7 @@ public class DuplicatedFilesClass implements DuplicatedFiles {
                 Runtime.getRuntime().exec(KILL_WIN + fp.getFile().getName() + "*\" /t");
         }
         toDelete.clear();
+        Thread.sleep(500);
     }
 
     @Override

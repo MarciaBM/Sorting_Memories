@@ -48,7 +48,7 @@ public interface DuplicatedFiles {
 
     void deleteFiles();
 
-    void closePreviews() throws IOException;
+    void closePreviews() throws IOException, InterruptedException;
 
     boolean analyzeAnswer(String answer);
 }

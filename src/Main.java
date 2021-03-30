@@ -29,7 +29,7 @@ public class Main {
     private static final String STAGE = "Stage %d: %d files.\n";
     private static final String CHOOSE_APP = "Please choose an application to open pictures\n(if the photos don't show up reboot the program and choose another app):";
     private static final String DESKTOP = "\\.desktop";
-    private static final String APP = "[ %d ] - %s\n";
+    private static final String APP = "[%d] - %s\n";
     private static final String VIDEOS = "Videos and others:";
     private static final String LOADING_STAGE = "Stage %d: loading data (this might take a while)\n";
     private static final String INVALID_COMM = "Invalid command";
@@ -122,7 +122,7 @@ public class Main {
 
         int conversionToScale = (actual * MAX_PROGRESS_BAR) / maxLength;
 
-        progressBar.append("\t" + ((conversionToScale * 100) / MAX_PROGRESS_BAR) + " % \t");
+        progressBar.append("\t").append((conversionToScale * 100) / MAX_PROGRESS_BAR).append(" % \t");
 
         for (int x = 0; x < conversionToScale; x++)
             if (x > 0)
@@ -159,7 +159,7 @@ public class Main {
     }
 
     private static void iteratingMaps(Scanner in, DuplicatedFiles df,
-                                      int percentage) throws IOException {
+                                      int percentage) throws IOException, InterruptedException {
         int n, stage = 0;
         FileProperties fileP;
         Iterator<List<FileProperties>> it;
@@ -205,7 +205,7 @@ public class Main {
         }
     }
 
-    private static void chooseToDelete(Scanner in, DuplicatedFiles df) throws IOException {
+    private static void chooseToDelete(Scanner in, DuplicatedFiles df) throws IOException, InterruptedException {
         System.out.println(DUPLICATED_FILES);
         int i = 0, aux;
         Iterator<FileProperties> it = df.getToDelete();
@@ -227,7 +227,7 @@ public class Main {
         df.closePreviews();
     }
 
-    private static void deleteDuplicatedFiles(Scanner in, DuplicatedFiles df) throws IOException {
+    private static void deleteDuplicatedFiles(Scanner in, DuplicatedFiles df) throws IOException, InterruptedException {
         System.out.println(WARNING_STAGES);
         System.out.println(LOADING_FILES);
         int sumVideos = df.deleteDuplicatedFiles();
@@ -245,7 +245,7 @@ public class Main {
 
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
 
         try {
             Scanner in = new Scanner(System.in);

@@ -16,11 +16,5 @@ public interface FileProperties {
 
     File getFile();
 
-    float getProportion();
-
     LocalDateTime getDate();
-
-    Mat getHash();
-
-    void setHash(Mat hash);
 }
