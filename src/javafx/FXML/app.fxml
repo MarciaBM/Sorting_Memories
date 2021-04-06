@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.text.Font?>
+<Pane xmlns:fx="http://javafx.com/fxml/1" id="app" fx:id="appPane" prefHeight="479.0" prefWidth="750.0"
+      stylesheets="@../../css/main.css" xmlns="http://javafx.com/javafx/11.0.1" fx:controller="javafx.AppController">
+    <children>
+        <Label layoutX="72.0" layoutY="97.0" text="Choose root folder:" textAlignment="CENTER" wrapText="true">
+            <font>
+                <Font name="Arial" size="13.0"/>
+            </font>
+        </Label>
+        <Label layoutX="244.0" layoutY="29.0" prefHeight="50.0" prefWidth="268.0" text="Sorting Memories"
+               textAlignment="CENTER">
+            <font>
+                <Font size="33.0"/>
+            </font>
+        </Label>
+        <TextField id="textfield" fx:id="pathRootFolder" layoutX="190.0" layoutY="94.0" prefHeight="24.0"
+                   prefWidth="445.0" stylesheets="@../../css/main.css"/>
+        <Button id="top-buttons" fx:id="searchPath" layoutX="645.0" layoutY="95.0" mnemonicParsing="false"
+                onAction="#pathChooser" prefHeight="17.0" prefWidth="24.0" style="-fx-background-color: white;"
+                textAlignment="CENTER">
+            <graphic>
+                <ImageView id="top-buttons" fitHeight="14.0" fitWidth="19.0" pickOnBounds="true" preserveRatio="true">
+                    <image>
+                        <Image url="@../img/lupa.png"/>
+                    </image>
+                </ImageView>
+            </graphic>
+        </Button>
+        <Button id="top-buttons" fx:id="def" layoutX="69.0" layoutY="138.0" mnemonicParsing="false"
+                onAction="#deleteEmptyFolders" prefHeight="31.0" prefWidth="170.0" stylesheets="@../../css/main.css"
+                text="Delete empty folders"/>
+        <Button id="top-buttons" fx:id="ddf" disable="true" layoutX="293.0" layoutY="138.0" mnemonicParsing="false"
+                prefHeight="31.0" prefWidth="170.0" stylesheets="@../../css/main.css" text="Delete duplicated files"/>
+        <Button id="top-buttons" layoutX="512.0" layoutY="138.0" mnemonicParsing="false" onAction="#organizeFiles"
+                prefHeight="31.0" prefWidth="170.0" stylesheets="@../../css/main.css" text="Organize files"/>
+    </children>
+</Pane>

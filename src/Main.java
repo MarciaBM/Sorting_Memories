@@ -33,18 +33,18 @@ public class Main {
     private static final String VIDEOS = "Videos and others:";
     private static final String LOADING_STAGE = "Stage %d: loading data (this might take a while)\n";
     private static final String INVALID_COMM = "Invalid command";
-    private static final String COME_BACK="Hope you come back :)";
-    private static final String INSERT_DIRECTORY="Please insert a directory";
-    private static final String MANY_ARGUMENTS="Upss too many arguments.";
-    private static final String INSERT_FOLDER="Please insert a folder's directory";
-    private static final String MENU="Choose what you want to do:\n[1] - Delete empty folders\n[2] - Delete duplicated files\n[3] - Organize files by year\n[E] - Exit";
-    private static final String LOADING_FILES="Loading files...";
-    private static final String WARNING_STAGES="WARNING: We will divide the images whole process into 9 stages, so how this is a long process you can execute them separately.\n" +
+    private static final String COME_BACK = "Hope you come back :)";
+    private static final String INSERT_DIRECTORY = "Please insert a directory";
+    private static final String MANY_ARGUMENTS = "Upss too many arguments.";
+    private static final String INSERT_FOLDER = "Please insert a folder's directory";
+    private static final String MENU = "Choose what you want to do:\n[1] - Delete empty folders\n[2] - Delete duplicated files\n[3] - Organize files by year\n[E] - Exit";
+    private static final String LOADING_FILES = "Loading files...";
+    private static final String WARNING_STAGES = "WARNING: We will divide the images whole process into 9 stages, so how this is a long process you can execute them separately.\n" +
             " The files you'll choose to delete will be moved to a folder named 'to delete', this is a security procedure,\n so at the end you will only have to delete the folder." +
             " If you already have a folder with this name please rename it.";
-    private static final String DUPLICATED_FILES="\nDuplicated files have been found, please choose the ones you want to delete (separate them with space):";
-    private static final String KEEP="K: Keep them all";
-    private static final String DELETE= "D: Delete them all";
+    private static final String DUPLICATED_FILES = "\nDuplicated files have been found, please choose the ones you want to delete (separate them with space):";
+    private static final String KEEP = "K: Keep them all";
+    private static final String DELETE = "D: Delete them all";
 
     private static void deleteEmptyFolders(File folder) {
         System.out.println(Tools.deleteEmptyFolders(folder, 0) + CONFIRMATION_EMPTY_FOLDERS);
