@@ -1,12 +1,14 @@
-# Script - Photos organizeFiles.OrganizerClass
+# Sorting Memories
 
 [![Downloads](https://img.shields.io/github/downloads/MarciaBM/script-photos/total)]()
 [![Languages](https://img.shields.io/github/languages/top/MarciaBM/script-photos)]()
 
-This is a program made with **Java** to help you organize your messy folder of pictures and videos. Developed for the **Linux** and **MacOS** operating systems. You can run it on **Windows** but will only work for images, videos features will be disable.
-It will automatically delete empty sub-folders and will recursevily detect if you have duplicated photos. Then you will be able to choose wich ones you want to keep and wich ones you don't. Also you will be able to choose the percentage of equality of the photos you want the program to detect. About the videos, for now it will only detect duplicated videos with 100% match of equality.
+This is a program made with **Java** to help you organize your messy folder of pictures and videos. Developed for the **Linux**, **Windows** and **MacOS** operating systems.
 
-Later, we intend that the software will be able to organize your photos by year, using the date the photo was taken, if available.
+It has three features:
+  . Delete empty sub-folders
+  . Recursevily detect if you have duplicated photos. You will be able to choose wich ones you want to keep and wich ones you don't. Also you will be able to choose the percentage of equality of the photos you want the program to detect. About the videos, for now it will only detect duplicated videos with 100% match of equality.
+  . Organize your files by year, using the date the photo was taken, but keeps them organized like you did.
 
 Pre-Requisites
 ------------------
@@ -34,20 +36,10 @@ And then reboot the terminal.
 
 Installation
 ------------------
-. Start for cloning our repository, you will need to have **Git** installed (usually it comes already installed on Linux).
-```
-git clone https://github.com/MarciaBM/script-photos/
-```
-Or you can just click on the Code green button and download the .zip file.
+At this moment it is not available, we're taking care of some final aspects.
 
-. Open your terminal inside the downloaded folder at **script-photos/src** and run:
-```
-javac -cp metadata-extractor-2.15.0.jar:opencv-451.jar Main.java
-```
-```
-java -cp .:metadata-extractor-2.15.0.jar:opencv-451.jar Main [path of the folder you want to run the script]
-```
-In Windows replace : for ;
+
+
 And that's it, your running our script, hope you like it and enjoy it!
 
 Credits: Pedro and Márcia
