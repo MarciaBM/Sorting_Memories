@@ -8,10 +8,9 @@ import organizeFiles.OrganizerClass;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Main {
 
@@ -183,48 +182,72 @@ public class Main {
                 } else
                     System.out.println(VIDEOS);
 
+                int processors = Runtime.getRuntime().availableProcessors() * 2;
+
                 for (int i = 0; i < files.size() - 1; i++) {
-                    boolean found = false;
                     fileP = files.get(i);
                     n++;
                     System.out.print("\rFile: " + n);
                     if (!fileP.getSeen() && !fileP.getToDelete()) {
-                        for (int j = i + 1; j < files.size(); j++) {
-                            if (df.compareFiles(files, fileP, percentage, j))
-                                found = true;
+                        df.createChoosingGroup(i);
+                        AtomicBoolean found = new AtomicBoolean(false);
+                        int portion = (files.size() - i - 1) / processors;
+                        List<Thread> threads = new ArrayList<>();
+
+                        int finalI = i;
+                        FileProperties finalFileP = fileP;
+                        for (int k = 0; k < processors; k++) {
+                            int finalK = k;
+                            Thread thread = new Thread(() -> {
+                                int aux = finalI + 1 + (finalK * portion);
+                                for (int j = aux; j < aux + portion; j++) {
+                                    if (df.compareFiles(finalFileP, files.get(j), percentage, finalI))
+                                        found.set(true);
+                                }
+                            });
+                            threads.add(thread);
+                            thread.start();
                         }
-                        if (found) {
-                            df.addToToDelete(fileP);
-                            chooseToDelete(in, df);
-                        }
+
+                        for (Thread t : threads)
+                            t.join();
+
+                        if (found.get())
+                            df.addToChoosingGroup(i, fileP);
+
                         System.gc();
                     }
                 }
-                df.deleteFiles();
             }
         }
+        chooseToDelete(in, df);
+        df.deleteFiles();
     }
 
     private static void chooseToDelete(Scanner in, DuplicatedFiles df) throws IOException, InterruptedException {
         System.out.println(DUPLICATED_FILES);
-        int i = 0, aux;
-        Iterator<FileProperties> it = df.getToDelete();
+        Iterator<Map.Entry<Integer, CopyOnWriteArrayList<FileProperties>>> it = df.getToDelete();
+
         while (it.hasNext()) {
-            FileProperties fp = it.next();
-            aux = i + 1;
-            System.out.println(aux + ": " + fp.getFile().getAbsolutePath());
-            df.showPicture(fp);
-            i++;
+            Map.Entry<Integer, CopyOnWriteArrayList<FileProperties>> entry = it.next();
+            CopyOnWriteArrayList<FileProperties> list = entry.getValue();
+
+            for (int i = 0; i < list.size(); i++) {
+                FileProperties fp = list.get(i);
+                System.out.println((i + 1) + ": " + fp.getFile().getAbsolutePath());
+                df.showPicture(fp);
+            }
+
+            System.out.println(KEEP);
+            System.out.println(DELETE);
+            //user
+            boolean accepted = false;
+            while (!accepted) {
+                String answer = in.nextLine().trim();
+                accepted = df.analyzeAnswer(answer, entry.getKey());
+            }
+            df.closePreviews(entry.getKey());
         }
-        System.out.println(KEEP);
-        System.out.println(DELETE);
-        //user
-        boolean accepted = false;
-        while (!accepted) {
-            String answer = in.nextLine().trim();
-            accepted = df.analyzeAnswer(answer);
-        }
-        df.closePreviews();
     }
 
     private static void deleteDuplicatedFiles(Scanner in, DuplicatedFiles df) throws IOException, InterruptedException {
@@ -272,7 +295,7 @@ public class Main {
                         break;
                     case "2":
                         deleteEmptyFolders(folder);
-                        deleteDuplicatedFiles(in, new DuplicatedFilesClass(folder));
+                        deleteDuplicatedFiles(in, new DuplicatedFiles(folder));
                         break;
                     case "3":
                         organizeFiles(in, new OrganizerClass(folder));
