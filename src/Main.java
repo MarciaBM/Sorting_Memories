@@ -1,10 +1,8 @@
 import duplicatedFiles.DuplicatedFiles;
-import duplicatedFiles.DuplicatedFilesClass;
 import duplicatedFiles.OSType;
 import file.FileProperties;
 import file.Tools;
 import organizeFiles.Organizer;
-import organizeFiles.OrganizerClass;
 
 import java.io.File;
 import java.io.IOException;
@@ -298,7 +296,7 @@ public class Main {
                         deleteDuplicatedFiles(in, new DuplicatedFiles(folder));
                         break;
                     case "3":
-                        organizeFiles(in, new OrganizerClass(folder));
+                        organizeFiles(in, new Organizer(folder));
                         deleteEmptyFolders(folder);
                         break;
                     case "E":
