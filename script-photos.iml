@@ -9,5 +9,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="lib" level="application" />
     <orderEntry type="library" name="script-photos" level="project" />
+    <orderEntry type="library" name="flatlaf-1.5" level="project" />
   </component>
 </module>

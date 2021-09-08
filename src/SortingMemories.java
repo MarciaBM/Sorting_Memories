@@ -1,18 +1,19 @@
+import com.formdev.flatlaf.FlatLightLaf;
 import duplicatedFiles.DuplicatedFiles;
 import duplicatedFiles.OSType;
 import file.FileProperties;
 import file.Tools;
 import organizeFiles.Organizer;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumn;
-import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,39 +26,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class SortingMemories {
     private static final int MAX_PROGRESS_BAR = 50;
     private static final String CONFIRMATION_EMPTY_FOLDERS = " empty folders were deleted.";
-    private static final String WARNING_ORGANIZING = "WARNING: if you want that some photos or folders to NOT being organized by year,\nput them on a folder named 'not organize' in the root folder";
+    private static final String WARNING_ORGANIZING = "WARNING: if you want that some photos or folders to NOT being organized by year,\nput them on a folder named 'not organize' in the root folder. Continue?";
     private static final String ORGANIZING = "Organizing photos...";
     private static final String ORGANIZED = " photos were organized";
-    private static final String PERCENTAGE = "Enter the equality percentage to compare the photos:";
-    private static final String IMAGES = "Images:";
-    private static final String TOTAL_IMAGES = "Total images: ";
-    private static final String STAGE_V = "Stage V - Total videos and others: %d\n\n";
-    private static final String ASK_STAGES = "Which stages do you want to run? (Separate numbers with spaces or 'A' to run all of except videos):";
-    private static final String STAGE = "Stage %d: %d files.\n";
     private static final String CHOOSE_APP = "Please choose an application to open pictures\n(if the photos don't show up reboot the program and choose another app):";
     private static final String DESKTOP = "\\.desktop";
-    private static final String APP = "[%d] - %s\n";
     private static final String VIDEOS = "Videos and others:";
-    private static final String LOADING_STAGE = "Stage %d: loading data (this might take a while)\n";
-    private static final String INVALID_COMM = "Invalid command";
-    private static final String COME_BACK = "Hope you come back :)";
-    private static final String INSERT_DIRECTORY = "Please insert a directory";
-    private static final String MANY_ARGUMENTS = "Upss too many arguments.";
     private static final String INSERT_FOLDER = "Please insert a folder's directory";
-    private static final String MENU = "Choose what you want to do:\n[1] - Delete empty folders\n[2] - Delete duplicated files\n[3] - Organize files by year\n[E] - Exit";
     private static final String LOADING_FILES = "Loading files...";
     private static final String WARNING_STAGES = "WARNING: We will divide the images whole process into 9 stages, so how this is a long process you can execute them separately.\n" +
             " The files you'll choose to delete will be moved to a folder named 'to delete', this is a security procedure,\n so at the end you will only have to delete the folder." +
             " If you already have a folder with this name please rename it.";
-    private static final String DUPLICATED_FILES = "\nDuplicated files have been found, please choose the ones you want to delete (separate them with space):";
-    private static final String KEEP = "K: Keep them all";
-    private static final String DELETE = "D: Delete them all";
     private static final String WRONG_SELECTION = "Choose just images stages or just videos stages.";
     private static final String WRONG_PERCENTAGE = "Wrong percentage value.";
 
     private JPanel rootPanel;
     private static JFrame frame;
-    private JTextPane sortingMemoriesTextPane;
     private JTextField textDir;
     private JButton searchButton;
     private JButton emptyFolders;
@@ -80,6 +64,7 @@ public class SortingMemories {
     private JPanel panel2;
     private JButton nextButton;
     private JTable table1;
+    private JLabel logo;
     private File folder;
     private List<JCheckBox> checkBoxes;
     private DuplicatedFiles df;
@@ -103,6 +88,10 @@ public class SortingMemories {
             public void actionPerformed(ActionEvent e) {
                 try {
                     checkDirectory();
+                    panel1.setVisible(false);
+                    panel2.setVisible(false);
+                    textDir.setEnabled(true);
+                    searchButton.setEnabled(true);
                     log.setText("");
                     JOptionPane.showMessageDialog(frame, Tools.deleteEmptyFolders(folder, 0) + CONFIRMATION_EMPTY_FOLDERS);
                 } catch (ScriptException scriptException) {
@@ -115,20 +104,26 @@ public class SortingMemories {
             public void actionPerformed(ActionEvent e) {
                 try {
                     checkDirectory();
+                    panel1.setVisible(false);
+                    panel2.setVisible(false);
+                    textDir.setEnabled(true);
+                    searchButton.setEnabled(true);
                     log.setText("");
-                    JOptionPane.showMessageDialog(frame, WARNING_ORGANIZING);
-                    int counter = 0;
-                    log.append("Log:\n");
-                    log.append(ORGANIZING + "\n");
-                    Iterator<String> it = (new Organizer(folder)).organizeFiles();
+                    int res = JOptionPane.showConfirmDialog(frame, WARNING_ORGANIZING,"Warning about organizing files", JOptionPane.YES_NO_OPTION);
+                    if(res == JOptionPane.YES_OPTION) {
+                        int counter = 0;
+                        log.append("Log:\n");
+                        log.append(ORGANIZING + "\n");
+                        Iterator<String> it = (new Organizer(folder)).organizeFiles();
 
-                    while (it.hasNext()) {
-                        log.append(it.next() + "\n");
-                        counter++;
+                        while (it.hasNext()) {
+                            log.append(it.next() + "\n");
+                            counter++;
+                        }
+
+                        int deleted = Tools.deleteEmptyFolders(folder, 0);
+                        JOptionPane.showMessageDialog(frame, counter + ORGANIZED + "\n" + deleted + CONFIRMATION_EMPTY_FOLDERS);
                     }
-
-                    int deleted = Tools.deleteEmptyFolders(folder, 0);
-                    JOptionPane.showMessageDialog(frame, counter + ORGANIZED + "\n" + deleted + CONFIRMATION_EMPTY_FOLDERS);
                 } catch (ScriptException scriptException) {
                     scriptException.printStackTrace();
                 }
@@ -223,6 +218,12 @@ public class SortingMemories {
                 checkBoxes.add(checkBox8);
                 checkBoxes.add(checkBox9);
                 checkBoxes.add(checkBox10);
+                nextButton.setBackground(Color.CYAN);
+                continueButton.setBackground(Color.CYAN);
+                searchButton.setBackground(Color.CYAN);
+                duplicatedFiles.setBackground(Color.lightGray);
+                organize.setBackground(Color.lightGray);
+                emptyFolders.setBackground(Color.lightGray);
             }
         });
         nextButton.addActionListener(new ActionListener() {
@@ -230,7 +231,7 @@ public class SortingMemories {
             public void actionPerformed(ActionEvent e) {
                 String answer = "";
                 for (int i = 0; i < size; i++) {
-                    if ((boolean) table1.getValueAt(i,0))
+                    if ((boolean) table1.getValueAt(i, 0))
                         answer += (i + 1) + " ";
                 }
 
@@ -377,7 +378,7 @@ public class SortingMemories {
                         df.createChoosingGroup(i);
                         AtomicBoolean found = new AtomicBoolean(false);
                         int portion;
-                        if(files.size() - i - 1 <= processors)
+                        if (files.size() - i - 1 <= processors)
                             portion = 1;
                         else
                             portion = (files.size() - i - 1) / processors;
@@ -386,7 +387,7 @@ public class SortingMemories {
                         int finalI = i;
                         FileProperties finalFileP = fileP;
 
-                        for (int k = 0; k < Math.min(processors,files.size()-i-1); k++) {
+                        for (int k = 0; k < Math.min(processors, files.size() - i - 1); k++) {
                             int finalK = k;
                             Thread thread = new Thread(() -> {
                                 int aux = finalI + 1 + (finalK * portion);
@@ -414,16 +415,16 @@ public class SortingMemories {
         chooseToDelete();
     }
 
-    private void chooseToDelete(){
+    private void chooseToDelete() {
         if (groups.hasNext()) {
             Map.Entry<Integer, CopyOnWriteArrayList<FileProperties>> entry = groups.next();
             CopyOnWriteArrayList<FileProperties> list = entry.getValue();
 
             if (!list.isEmpty()) {
-                DefaultTableModel model = new DefaultTableModel(new Object[]{"Delete?","File path"}, 0) {
+                DefaultTableModel model = new DefaultTableModel(new Object[]{"Delete?", "File path"}, 0) {
                     @Override
                     public Class getColumnClass(int columnIndex) {
-                        if(columnIndex == 0)
+                        if (columnIndex == 0)
                             return Boolean.class;
                         return String.class;
                     }
@@ -432,7 +433,7 @@ public class SortingMemories {
                 for (int i = 0; i < list.size(); i++) {
                     FileProperties fp = list.get(i);
                     String text = fp.getFile().getAbsolutePath();
-                    model.addRow(new Object[]{false,text});
+                    model.addRow(new Object[]{false, text});
                     df.showPicture(fp);
                 }
 
@@ -441,27 +442,38 @@ public class SortingMemories {
 
                 size = list.size();
                 master = entry.getKey();
-            }else
+            } else
                 chooseToDelete();
-        }
-       else {
+        } else {
             df.deleteFiles();
             panel2.setVisible(false);
             log.setText("");
             textDir.setEnabled(true);
             searchButton.setEnabled(true);
-            JOptionPane.showMessageDialog(null,"Selected files were deleted!");
+            JOptionPane.showMessageDialog(null, "Selected files were deleted!");
         }
     }
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws UnsupportedLookAndFeelException {
+        UIManager.setLookAndFeel( new FlatLightLaf() );
         frame = new JFrame("Sorting Memories");
         frame.setContentPane(new SortingMemories().rootPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setIconImage(new ImageIcon("logo.png").getImage());
         frame.pack();
         frame.setSize(800, 500);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+    }
+
+    private void createUIComponents() {
+        try {
+            BufferedImage img = ImageIO.read(new File("logo.png"));
+            logo = new JLabel(new ImageIcon(img.getScaledInstance(50, 50,
+                    Image.SCALE_SMOOTH)));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
