@@ -186,7 +186,7 @@ public class Main {
                     fileP = files.get(i);
                     n++;
                     System.out.print("\rFile: " + n);
-                    if (!fileP.getSeen() && !fileP.getToDelete()) {
+                    if (!fileP.getToDelete()) {
                         df.createChoosingGroup(i);
                         AtomicBoolean found = new AtomicBoolean(false);
                         int portion = (files.size() - i - 1) / processors;
@@ -251,18 +251,18 @@ public class Main {
     private static void deleteDuplicatedFiles(Scanner in, DuplicatedFiles df) throws IOException, InterruptedException {
         System.out.println(WARNING_STAGES);
         System.out.println(LOADING_FILES);
-        int sumVideos = df.deleteDuplicatedFiles();
-        printStages(in, df, sumVideos);
-
-        if (df.getIsImage()) {
-            if (df.getOSType() == OSType.MACOS)
-                df.setApp("open");
-            else if (df.getOSType() == OSType.LINUX)
-                chooseImagesApp(in, df);
-
-            iteratingMaps(in, df, getPercentage(in));
-        } else
-            iteratingMaps(in, df, -1);
+//        int sumVideos = df.deleteDuplicatedFiles();
+//        printStages(in, df, sumVideos);
+//
+//        if (df.getIsImage()) {
+//            if (df.getOSType() == OSType.MACOS)
+//                df.setApp("open");
+//            else if (df.getOSType() == OSType.LINUX)
+//                chooseImagesApp(in, df);
+//
+//            iteratingMaps(in, df, getPercentage(in));
+//        } else
+//            iteratingMaps(in, df, -1);
 
     }
 

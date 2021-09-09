@@ -11,8 +11,6 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -22,9 +20,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SortingMemories {
-    private static final int MAX_PROGRESS_BAR = 50;
     private static final String CONFIRMATION_EMPTY_FOLDERS = " empty folders were deleted.";
     private static final String WARNING_ORGANIZING = "WARNING: if you want that some photos or folders to NOT being organized by year,\nput them on a folder named 'not organize' in the root folder. Continue?";
     private static final String ORGANIZING = "Organizing photos...";
@@ -36,7 +34,7 @@ public class SortingMemories {
     private static final String LOADING_FILES = "Loading files...";
     private static final String WARNING_STAGES = "WARNING: We will divide the images whole process into 9 stages, so how this is a long process you can execute them separately.\n" +
             " The files you'll choose to delete will be moved to a folder named 'to delete', this is a security procedure,\n so at the end you will only have to delete the folder." +
-            " If you already have a folder with this name please rename it.";
+            " If you already have a folder with this name please rename it. Do you want to continue?";
     private static final String WRONG_SELECTION = "Choose just images stages or just videos stages.";
     private static final String WRONG_PERCENTAGE = "Wrong percentage value.";
 
@@ -65,14 +63,40 @@ public class SortingMemories {
     private JButton nextButton;
     private JTable table1;
     private JLabel logo;
+    private JPanel progressBarPanel;
+    private JProgressBar progressBar1;
+    private JLabel pBarDesc;
+    private JScrollPane logPanel;
     private File folder;
     private List<JCheckBox> checkBoxes;
     private DuplicatedFiles df;
     private Iterator<Map.Entry<Integer, CopyOnWriteArrayList<FileProperties>>> groups;
     private int size;
     private int master;
+    private int index;
 
     public SortingMemories() {
+        panel1.setVisible(false);
+        panel2.setVisible(false);
+        logPanel.setVisible(false);
+        progressBarPanel.setVisible(false);
+        checkBoxes = new ArrayList<>();
+        checkBoxes.add(checkBox1);
+        checkBoxes.add(checkBox2);
+        checkBoxes.add(checkBox3);
+        checkBoxes.add(checkBox4);
+        checkBoxes.add(checkBox5);
+        checkBoxes.add(checkBox6);
+        checkBoxes.add(checkBox7);
+        checkBoxes.add(checkBox8);
+        checkBoxes.add(checkBox9);
+        checkBoxes.add(checkBox10);
+        nextButton.setBackground(Color.CYAN);
+        continueButton.setBackground(Color.CYAN);
+        searchButton.setBackground(Color.CYAN);
+        duplicatedFiles.setBackground(Color.lightGray);
+        organize.setBackground(Color.lightGray);
+        emptyFolders.setBackground(Color.lightGray);
         searchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -88,11 +112,14 @@ public class SortingMemories {
             public void actionPerformed(ActionEvent e) {
                 try {
                     checkDirectory();
+                    frame.setAlwaysOnTop(false);
+                    logPanel.setVisible(false);
                     panel1.setVisible(false);
                     panel2.setVisible(false);
+                    progressBarPanel.setVisible(false);
                     textDir.setEnabled(true);
                     searchButton.setEnabled(true);
-                    log.setText("");
+
                     JOptionPane.showMessageDialog(frame, Tools.deleteEmptyFolders(folder, 0) + CONFIRMATION_EMPTY_FOLDERS);
                 } catch (ScriptException scriptException) {
                     scriptException.printStackTrace();
@@ -104,13 +131,16 @@ public class SortingMemories {
             public void actionPerformed(ActionEvent e) {
                 try {
                     checkDirectory();
+                    frame.setAlwaysOnTop(false);
+                    logPanel.setVisible(true);
                     panel1.setVisible(false);
                     panel2.setVisible(false);
+                    progressBarPanel.setVisible(false);
                     textDir.setEnabled(true);
                     searchButton.setEnabled(true);
                     log.setText("");
-                    int res = JOptionPane.showConfirmDialog(frame, WARNING_ORGANIZING,"Warning about organizing files", JOptionPane.YES_NO_OPTION);
-                    if(res == JOptionPane.YES_OPTION) {
+                    int res = JOptionPane.showConfirmDialog(frame, WARNING_ORGANIZING, "Warning about organizing files", JOptionPane.YES_NO_OPTION);
+                    if (res == JOptionPane.YES_OPTION) {
                         int counter = 0;
                         log.append("Log:\n");
                         log.append(ORGANIZING + "\n");
@@ -120,9 +150,12 @@ public class SortingMemories {
                             log.append(it.next() + "\n");
                             counter++;
                         }
-
                         int deleted = Tools.deleteEmptyFolders(folder, 0);
                         JOptionPane.showMessageDialog(frame, counter + ORGANIZED + "\n" + deleted + CONFIRMATION_EMPTY_FOLDERS);
+                        //martelada!!!!!!1
+                        frame.setSize(800, 601);
+                        frame.setSize(800, 600);
+                        /////////////////////////
                     }
                 } catch (ScriptException scriptException) {
                     scriptException.printStackTrace();
@@ -134,19 +167,31 @@ public class SortingMemories {
             public void actionPerformed(ActionEvent e) {
                 try {
                     checkDirectory();
-                    frame.setSize(800, 600);
-                    frame.setLocationRelativeTo(null);
                     textDir.setEnabled(false);
+                    frame.setAlwaysOnTop(false);
                     searchButton.setEnabled(false);
+                    panel2.setVisible(false);
+                    panel1.setVisible(false);
+                    progressBarPanel.setVisible(false);
+                    logPanel.setVisible(false);
                     log.setText("");
-                    JOptionPane.showMessageDialog(frame, WARNING_STAGES);
-                    panel1.setVisible(true);
-                    log.append(LOADING_FILES + "\n");
-                    df = new DuplicatedFiles(folder);
-                    int sumVideos = df.deleteDuplicatedFiles();
-                    printStages(sumVideos);
+                    int res = JOptionPane.showConfirmDialog(frame, WARNING_STAGES, "Warning", JOptionPane.YES_NO_OPTION);
+                    if (res == JOptionPane.YES_OPTION) {
+                        df = new DuplicatedFiles(folder);
+                        new SwingWorker<Void, String>() {
+                            @Override
+                            protected Void doInBackground() throws InterruptedException {
+                                int sumVideos = deleteDuplicatedFiles();
+                                printStages(sumVideos);
+                                return null;
+                            }
 
-
+                            @Override
+                            protected void done() {
+                                panel1.setVisible(true);
+                            }
+                        }.execute();
+                    }
                 } catch (ScriptException scriptException) {
                     scriptException.printStackTrace();
                 }
@@ -185,45 +230,32 @@ public class SortingMemories {
 
                     int percentage = getPercentage();
                     panel1.setVisible(false);
-                    panel2.setVisible(true);
+
                     if (df.getIsImage()) {
                         if (df.getOSType() == OSType.MACOS)
                             df.setApp("open");
                         else if (df.getOSType() == OSType.LINUX)
                             chooseImagesApp();
-                        iteratingMaps(percentage);
+                        new SwingWorker<Void, String>() {
+                            @Override
+                            protected Void doInBackground() throws InterruptedException {
+                                iteratingMaps(percentage);
+                                return null;
+                            }
+                        }.execute();
                     } else {
-                        iteratingMaps(-1);
+                        new SwingWorker<Void, String>() {
+                            @Override
+                            protected Void doInBackground() throws InterruptedException {
+                                iteratingMaps(-1);
+                                return null;
+                            }
+                        }.execute();
                     }
 
-                } catch (ScriptException | IOException | InterruptedException scriptException) {
+                } catch (ScriptException | IOException scriptException) {
                     scriptException.printStackTrace();
                 }
-            }
-        });
-        rootPanel.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
-                super.componentResized(e);
-                panel1.setVisible(false);
-                panel2.setVisible(false);
-                checkBoxes = new ArrayList<>();
-                checkBoxes.add(checkBox1);
-                checkBoxes.add(checkBox2);
-                checkBoxes.add(checkBox3);
-                checkBoxes.add(checkBox4);
-                checkBoxes.add(checkBox5);
-                checkBoxes.add(checkBox6);
-                checkBoxes.add(checkBox7);
-                checkBoxes.add(checkBox8);
-                checkBoxes.add(checkBox9);
-                checkBoxes.add(checkBox10);
-                nextButton.setBackground(Color.CYAN);
-                continueButton.setBackground(Color.CYAN);
-                searchButton.setBackground(Color.CYAN);
-                duplicatedFiles.setBackground(Color.lightGray);
-                organize.setBackground(Color.lightGray);
-                emptyFolders.setBackground(Color.lightGray);
             }
         });
         nextButton.addActionListener(new ActionListener() {
@@ -238,6 +270,7 @@ public class SortingMemories {
                 df.analyzeAnswer(answer, master);
                 try {
                     df.closePreviews(master);
+                    frame.setAlwaysOnTop(false);
                 } catch (IOException | InterruptedException ioException) {
                     ioException.printStackTrace();
                 }
@@ -272,39 +305,26 @@ public class SortingMemories {
 
     private void printStages(int sumVideos) {
         Iterator<List<FileProperties>> it = df.getAllImages();
-
-        checkBox1.setText("Stage 1: " + it.next().size() + " images");
-        checkBox2.setText("Stage 2: " + it.next().size() + " images");
-        checkBox3.setText("Stage 3: " + it.next().size() + " images");
-        checkBox4.setText("Stage 4: " + it.next().size() + " images");
-        checkBox5.setText("Stage 5: " + it.next().size() + " images");
-        checkBox6.setText("Stage 6: " + it.next().size() + " images");
-        checkBox7.setText("Stage 7: " + it.next().size() + " images");
-        checkBox8.setText("Stage 8: " + it.next().size() + " images");
-        checkBox9.setText("Stage 9: " + it.next().size() + " images");
+        for (int i = 0; i < 9; i++) {
+            int size = it.next().size();
+            JCheckBox cb = checkBoxes.get(i);
+            cb.setText("Stage " + (i + 1) + ": " + size + " images");
+            cb.setEnabled(size != 0);
+        }
         checkBox10.setText("Stage V - Total videos and others: " + sumVideos + " files");
+        checkBox10.setEnabled(sumVideos != 0);
     }
 
-    private String progressBar(int actual, int maxLength) {
-        StringBuilder progressBar = new StringBuilder();
-
-        for (var i = 0; i < MAX_PROGRESS_BAR; i++) // set default values
-            if (i == 0)
-                progressBar.append("[");
-            else if (i == MAX_PROGRESS_BAR - 1)
-                progressBar.append("]");
-            else
-                progressBar.append("-");
-
-        int conversionToScale = (actual * MAX_PROGRESS_BAR) / maxLength;
-
-        progressBar.append("\t").append((conversionToScale * 100) / MAX_PROGRESS_BAR).append(" % \t");
-
-        for (int x = 0; x < conversionToScale; x++)
-            if (x > 0)
-                progressBar.setCharAt(x, '█');
-
-        return "\r" + progressBar;
+    private void setProgressBar(String text, int max) {
+        DefaultBoundedRangeModel model = new DefaultBoundedRangeModel();
+        model.setMinimum(0);
+        model.setMaximum(max);
+        model.setValue(0);
+        progressBar1.setModel(model);
+        progressBar1.setPreferredSize(new Dimension(250, 20));
+        progressBar1.setStringPainted(true);
+        pBarDesc.setText(text);
+        progressBarPanel.setVisible(true);
     }
 
     private void chooseImagesApp() throws IOException {
@@ -343,8 +363,59 @@ public class SortingMemories {
         }
     }
 
-    private void iteratingMaps(int percentage) throws IOException, InterruptedException {
-        int n, stage = 0;
+    private int deleteDuplicatedFiles() throws InterruptedException {
+        AtomicInteger sumVideos = new AtomicInteger();
+        int total = (int) df.fileCount(folder.toPath());
+        AtomicInteger counter = new AtomicInteger();
+        File[] files = folder.listFiles();
+
+        int processors = Runtime.getRuntime().availableProcessors() * 2;
+        int portion;
+        assert files != null;
+        if (files.length <= processors)
+            portion = 1;
+        else
+            portion = (files.length) / processors;
+        List<Thread> threads = new ArrayList<>();
+        AtomicInteger aux = new AtomicInteger();
+
+        setProgressBar(LOADING_FILES, total);
+        for (int i = 0; i < Math.min(files.length, processors); i++) {
+            int finalI = i;
+            Thread thread = new Thread(() -> {
+                int begin = finalI * portion, end;
+                if (finalI == Math.min(files.length, processors) - 1)
+                    end = files.length;
+                else
+                    end = begin + portion;
+                for (int j = begin; j < end; j++) {
+                    aux.getAndIncrement();
+                    File f = files[j];
+                    Iterator<File> it = Tools.getFile(f, new ArrayList<>());
+                    while (it.hasNext()) {
+                        File file = it.next();
+                        counter.getAndIncrement();
+                        synchronized (this) {
+                            progressBar1.setValue(counter.get());
+                        }
+                        sumVideos.addAndGet(df.deleteDuplicatedFiles(file));
+                    }
+                }
+            });
+            threads.add(thread);
+            thread.start();
+        }
+
+        for (Thread t : threads)
+            t.join();
+
+        assert aux.get() == files.length;
+        progressBarPanel.setVisible(false);
+        return sumVideos.get();
+    }
+
+    private void iteratingMaps(int percentage) throws InterruptedException {
+        int stage = 0;
         FileProperties fileP;
         Iterator<List<FileProperties>> it;
 
@@ -353,45 +424,85 @@ public class SortingMemories {
         else
             it = df.getAllVideos();
 
+        logPanel.setVisible(true);
         while (it.hasNext()) {
             stage++;
-            n = 0;
             List<FileProperties> files = it.next();
+            int processors = Runtime.getRuntime().availableProcessors() * 2;
+            int aux = 0;
             if (df.hasStage(stage) || df.hasStage(-1) || !df.getIsImage()) {
+                log.append("Loading stage " + stage + "...\n");
+                setProgressBar("Loading stage " + stage + "... (1/2)\n", files.size());
                 if (df.getIsImage()) {
-                    log.append("Stage " + stage + ": loading data (this might take a while)\n");
-
                     for (FileProperties fp : files) {
-                        log.append(progressBar(files.indexOf(fp), files.size()) + "\n");
                         df.definingHash(fp);
+                        progressBar1.setValue(aux++);
                     }
                 } else
-                    log.append(VIDEOS + "\n");
+                    System.out.println(VIDEOS);
 
-                int processors = Runtime.getRuntime().availableProcessors() * 2;
+//                if (df.getIsImage()) {
+//                    setProgressBar("Stage " + stage + ": loading data (this might take a while)", files.size());
+//                    int portion;
+//                    if (files.size() <= processors)
+//                        portion = 1;
+//                    else
+//                        portion = (files.size()) / processors;
+//                    List<Thread> threads = new ArrayList<>();
+//                    AtomicInteger counter = new AtomicInteger();
+//
+//                    for (int i = 0; i < Math.min(files.size(), processors); i++) {
+//                        int finalI = i;
+//                        Thread thread = new Thread(() -> {
+//                            for (int j = finalI * portion; j < Math.min(finalI * portion + portion,files.size()); j++) {
+//                                FileProperties fp = files.get(j);
+//                                counter.getAndIncrement();
+//                                synchronized (this) {
+//                                    progressBar1.setValue(counter.get());
+//                                }
+//                                df.definingHash(fp);
+//                            }
+//                        });
+//                        threads.add(thread);
+//                        thread.start();
+//                    }
+//
+//                    for (Thread t : threads)
+//                        t.join();
+//                    progressBarPanel.setVisible(false);
+//                } else
+//                    log.append(VIDEOS + "\n");
 
+                progressBarPanel.setVisible(true);
+                log.append("Comparing files from stage " + stage + "...\n");
+                setProgressBar("Comparing files... (2/2)", files.size() - 1);
                 for (int i = 0; i < files.size() - 1; i++) {
                     fileP = files.get(i);
-                    n++;
-                    log.append("\rFile: " + n + "\n");
-                    if (!fileP.getSeen() && !fileP.getToDelete()) {
+                    if (!fileP.getSeen()) {
                         df.createChoosingGroup(i);
                         AtomicBoolean found = new AtomicBoolean(false);
                         int portion;
-                        if (files.size() - i - 1 <= processors)
+                        int nFiles = files.size() - i - 1;
+                        if (nFiles <= processors)
                             portion = 1;
                         else
-                            portion = (files.size() - i - 1) / processors;
+                            portion = nFiles / processors;
                         List<Thread> threads = new ArrayList<>();
 
                         int finalI = i;
                         FileProperties finalFileP = fileP;
+                        AtomicInteger counter = new AtomicInteger();
 
-                        for (int k = 0; k < Math.min(processors, files.size() - i - 1); k++) {
+                        for (int k = 0; k < Math.min(processors, nFiles); k++) {
                             int finalK = k;
                             Thread thread = new Thread(() -> {
-                                int aux = finalI + 1 + (finalK * portion);
-                                for (int j = aux; j < aux + portion; j++) {
+                                int begin = finalI + 1 + (finalK * portion), end;
+                                if (finalK == Math.min(processors, nFiles) - 1)
+                                    end = files.size();
+                                else
+                                    end = begin + portion;
+                                for (int j = begin; j < end; j++) {
+                                    counter.getAndIncrement();
                                     if (df.compareFiles(finalFileP, files.get(j), percentage, finalI))
                                         found.set(true);
                                 }
@@ -403,51 +514,66 @@ public class SortingMemories {
                         for (Thread t : threads)
                             t.join();
 
+                        assert nFiles == counter.get();
+
                         if (found.get())
                             df.addToChoosingGroup(i, fileP);
+                        else
+                            df.removeChoosingGroup(i);
 
                         System.gc();
                     }
+                    progressBar1.setValue(i);
                 }
             }
         }
         groups = df.getToDelete();
-        chooseToDelete();
+        progressBarPanel.setVisible(false);
+        log.setText("");
+        logPanel.setVisible(false);
+        if (!groups.hasNext()) {
+            panel2.setVisible(false);
+            JOptionPane.showMessageDialog(null, "There aren't duplicated files!");
+            textDir.setEnabled(true);
+            searchButton.setEnabled(true);
+        } else {
+            panel2.setVisible(true);
+            index = 1;
+            chooseToDelete();
+        }
     }
 
     private void chooseToDelete() {
+        nextButton.setText("Next (" + index + "/" + df.getChoosingGroupsSize() + ")");
         if (groups.hasNext()) {
             Map.Entry<Integer, CopyOnWriteArrayList<FileProperties>> entry = groups.next();
             CopyOnWriteArrayList<FileProperties> list = entry.getValue();
+            index++;
 
-            if (!list.isEmpty()) {
-                DefaultTableModel model = new DefaultTableModel(new Object[]{"Delete?", "File path"}, 0) {
-                    @Override
-                    public Class getColumnClass(int columnIndex) {
-                        if (columnIndex == 0)
-                            return Boolean.class;
-                        return String.class;
-                    }
-                };
-
-                for (int i = 0; i < list.size(); i++) {
-                    FileProperties fp = list.get(i);
-                    String text = fp.getFile().getAbsolutePath();
-                    model.addRow(new Object[]{false, text});
-                    df.showPicture(fp);
+            DefaultTableModel model = new DefaultTableModel(new Object[]{"Delete?", "File path"}, 0) {
+                @Override
+                public Class getColumnClass(int columnIndex) {
+                    if (columnIndex == 0)
+                        return Boolean.class;
+                    return String.class;
                 }
+            };
 
-                table1.setModel(model);
-                table1.getColumn(table1.getColumnName(0)).setMaxWidth(60);
+            for (FileProperties fp : list) {
+                String text = fp.getFile().getAbsolutePath();
+                model.addRow(new Object[]{false, text});
+                df.showPicture(fp);
+            }
 
-                size = list.size();
-                master = entry.getKey();
-            } else
-                chooseToDelete();
+            frame.setAlwaysOnTop(true);
+            table1.setModel(model);
+            table1.getColumn(table1.getColumnName(0)).setMaxWidth(60);
+            size = list.size();
+            master = entry.getKey();
+
         } else {
             df.deleteFiles();
             panel2.setVisible(false);
-            log.setText("");
             textDir.setEnabled(true);
             searchButton.setEnabled(true);
             JOptionPane.showMessageDialog(null, "Selected files were deleted!");
@@ -456,13 +582,13 @@ public class SortingMemories {
 
 
     public static void main(String[] args) throws UnsupportedLookAndFeelException {
-        UIManager.setLookAndFeel( new FlatLightLaf() );
+        UIManager.setLookAndFeel(new FlatLightLaf());
         frame = new JFrame("Sorting Memories");
         frame.setContentPane(new SortingMemories().rootPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setIconImage(new ImageIcon("logo.png").getImage());
         frame.pack();
-        frame.setSize(800, 500);
+        frame.setSize(800, 600);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }

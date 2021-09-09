@@ -5,6 +5,7 @@ import org.opencv.core.CvException;
 import org.opencv.core.Mat;
 import org.opencv.img_hash.AverageHash;
 import org.opencv.img_hash.ImgHashBase;
+import org.opencv.img_hash.PHash;
 import org.opencv.imgcodecs.Imgcodecs;
 
 import javax.imageio.ImageIO;
@@ -17,9 +18,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 
 public class DuplicatedFiles {
     private static final float PROPORTION_MARGIN = 0.02f;
@@ -68,7 +71,7 @@ public class DuplicatedFiles {
         defineOS();
         loadLib();
         app = null;
-        ihb = AverageHash.create();
+        ihb = PHash.create();
         videos = new HashMap<>();
         images = new HashMap<>();
         stages = new ArrayList<>();
@@ -114,6 +117,12 @@ public class DuplicatedFiles {
         choosingGroups.get(i).add(fp);
     }
 
+    public void removeChoosingGroup(int i){choosingGroups.remove(i);}
+
+    public int getChoosingGroupsSize(){
+        return choosingGroups.size();
+    }
+
     public OSType getOSType() {
         return osType;
     }
@@ -134,7 +143,7 @@ public class DuplicatedFiles {
         return stages.contains(stage);
     }
 
-    private String getMimeType(File f) {
+    public String getMimeType(File f) {
         try {
             String mimetype = Files.probeContentType(f.toPath());
             if (mimetype == null)
@@ -184,35 +193,47 @@ public class DuplicatedFiles {
         this.app = app;
     }
 
-    public int deleteDuplicatedFiles() {
+    public long fileCount(Path dir) {
+        try {
+            return Files.walk(dir)
+                    .parallel()
+                    .filter(p -> !p.toFile().isDirectory())
+                    .count();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+    public int deleteDuplicatedFiles(File file) {
         int sumVideos = 0;
+        if(!file.getAbsolutePath().contains(root.getAbsolutePath() + File.separator + "to delete")) {
+            if (getMimeType(file).equals(IMAGE)) {
+                Dimension d = getImageDimension(file);
+                if (d != null) {
+                    float proportion = (float) d.height / (float) d.width, valueInMap = AR_OTHER;
+                    Set<Float> aspectRatios = images.keySet();
 
-        for (File f : root.listFiles()) {
-            Iterator<File> it = Tools.getFile(f, new ArrayList<>());
-            while (it.hasNext()) {
-                File file = it.next();
-                if (getMimeType(file).equals(IMAGE)) {
-                    Dimension d = getImageDimension(file);
-                    if (d != null) {
-                        float proportion = (float) d.height / (float) d.width, valueInMap = AR_OTHER;
-                        Set<Float> aspectRatios = images.keySet();
-
-                        for (float aR : aspectRatios)
-                            if (Math.abs(proportion - aR) <= PROPORTION_MARGIN)
-                                valueInMap = aR;
-
-                        images.get(valueInMap).add(new ImagePropertiesClass(file, false, false, proportion, Tools.getExifDate(file), new Mat()));
-
+                    for (float aR : aspectRatios)
+                        if (Math.abs(proportion - aR) <= PROPORTION_MARGIN)
+                            valueInMap = aR;
+                    ImageProperties ip = new ImagePropertiesClass(file, false, false, proportion, Tools.getExifDate(file), new Mat());
+                    synchronized (this) {
+                        images.get(valueInMap).add(ip);
                     }
-                } else if (!getMimeType(file).equals("")) {
-                    sumVideos++;
-                    long size = file.length();
+                }
+            } else if (!getMimeType(file).equals("")) {
+                sumVideos++;
+                long size = file.length();
+                VideoProperties vp = new VideoPropertiesClass(file, false, false, Tools.getExifDate(file));
+                synchronized (this) {
                     if (!videos.containsKey(size))
                         videos.put(size, new ArrayList<>());
-                    videos.get(size).add(new VideoPropertiesClass(file, false, false, Tools.getExifDate(file)));
+                    videos.get(size).add(vp);
                 }
             }
         }
+
         return sumVideos;
     }
 
@@ -260,7 +281,7 @@ public class DuplicatedFiles {
     public boolean compareFiles(FileProperties fileP, FileProperties secondFileP,
                                 int percentage, int master) {
         boolean found = false;
-        if (!secondFileP.getSeen() && !secondFileP.getToDelete()) {
+        if (!secondFileP.getSeen()) {
             boolean cantCompare = false;
             if (fileP.getDate() != null && secondFileP.getDate() != null)
                 if (TimeUnit.DAYS.convert(Math.abs(fileP.getDate().getNano() - secondFileP.getDate().getNano()), TimeUnit.NANOSECONDS) > 1)
@@ -272,8 +293,8 @@ public class DuplicatedFiles {
                     if (ip2.getHash() != null && ip1.getHash() != null) {
                         if (100.0 - (ihb.compare(ip1.getHash(), ip2.getHash()) * 100.0 / 64.0) >= percentage) {
                             found = true;
-                            choosingGroups.get(master).add(secondFileP);
                             secondFileP.setSeen(true);
+                            choosingGroups.get(master).add(secondFileP);
                         }
                     }
                 }
