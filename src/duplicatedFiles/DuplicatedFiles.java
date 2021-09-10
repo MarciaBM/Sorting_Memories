@@ -115,9 +115,11 @@ public class DuplicatedFiles {
         choosingGroups.get(i).add(fp);
     }
 
-    public void removeChoosingGroup(int i){choosingGroups.remove(i);}
+    public void removeChoosingGroup(int i) {
+        choosingGroups.remove(i);
+    }
 
-    public int getChoosingGroupsSize(){
+    public int getChoosingGroupsSize() {
         return choosingGroups.size();
     }
 
@@ -205,7 +207,7 @@ public class DuplicatedFiles {
 
     public int deleteDuplicatedFiles(File file) {
         int sumVideos = 0;
-        if(!file.getAbsolutePath().contains(root.getAbsolutePath() + File.separator + "to delete")) {
+        if (!file.getAbsolutePath().contains(root.getAbsolutePath() + File.separator + "to delete")) {
             if (getMimeType(file).equals(IMAGE)) {
                 Dimension d = getImageDimension(file);
                 if (d != null) {
@@ -380,25 +382,19 @@ public class DuplicatedFiles {
         Thread.sleep(500);
     }
 
-    public boolean analyzeAnswer(String answer, int master) {
-        boolean accepted = false;
+    public String analyzeAnswer(String answer, int master) {
+        StringBuilder res = new StringBuilder();
         CopyOnWriteArrayList<FileProperties> list = choosingGroups.get(master);
-
-        if (answer.matches("[0-9 ]+|K|D|k|d")) {
-            accepted = true;
-            if (answer.equalsIgnoreCase("D")) {
-                for (FileProperties fp : list)
-                    fp.setToDelete(true);
-            } else if (!answer.equalsIgnoreCase("K")) {
-                String[] numbers = answer.split(" ");
-                for (String s : numbers) {
-                    int index = Integer.parseInt(s) - 1;
-                    if (index < list.size() && index >= 0)
-                        list.get(index).setToDelete(true);
-                }
+        if(!answer.equals("")) {
+            String[] numbers = answer.split(" ");
+            for (String s : numbers) {
+                int index = Integer.parseInt(s) - 1;
+                FileProperties fp = list.get(index);
+                fp.setToDelete(true);
+                res.append(fp.getFile().getAbsolutePath()).append("\n");
             }
         }
-        return accepted;
+        return res.toString();
     }
 
 }

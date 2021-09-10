@@ -14,10 +14,8 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,13 +29,13 @@ public class SortingMemories {
     private static final String DESKTOP = "\\.desktop";
     private static final String VIDEOS = "Videos and others:";
     private static final String INSERT_FOLDER = "Please insert a folder's directory";
-    private static final String LOADING_FILES = "Loading files...";
+    private static final String LOADING_FILES = "Loading all files metadata...";
     private static final String WARNING_STAGES = "WARNING: We will divide the images whole process into 9 stages, so how this is a long process you can execute them separately.\n" +
             " The files you'll choose to delete will be moved to a folder named 'to delete', this is a security procedure,\n so at the end you will only have to delete the folder." +
             " If you already have a folder with this name please rename it. Do you want to continue?";
     private static final String WRONG_SELECTION = "Choose just images stages or just videos stages.";
     private static final String WRONG_PERCENTAGE = "Wrong percentage value.";
-    private static final int MULTIPLICATION = 3;
+    private static final int MULTIPLICATION = 5;
 
     private JPanel rootPanel;
     private static JFrame frame;
@@ -268,7 +266,7 @@ public class SortingMemories {
                         answer.append(i + 1).append(" ");
                 }
 
-                df.analyzeAnswer(answer.toString(), master);
+                log.append(df.analyzeAnswer(answer.toString(), master));
                 try {
                     df.closePreviews(master);
                     frame.setAlwaysOnTop(false);
@@ -368,30 +366,29 @@ public class SortingMemories {
         AtomicInteger sumVideos = new AtomicInteger();
         int total = (int) df.fileCount(folder.toPath());
         AtomicInteger counter = new AtomicInteger();
-        File[] files = folder.listFiles();
-
+        File[] array = folder.listFiles();
+        assert array != null;
+        List<File> files = new ArrayList<>(Arrays.asList(array));
         int processors = Runtime.getRuntime().availableProcessors() * MULTIPLICATION;
         int portion;
-        assert files != null;
-        if (files.length <= processors)
+        if (files.size() <= processors)
             portion = 1;
         else
-            portion = (files.length) / processors;
+            portion = (files.size()) / processors;
         List<Thread> threads = new ArrayList<>();
         AtomicInteger aux = new AtomicInteger();
 
         setProgressBar(LOADING_FILES, total);
-        for (int i = 0; i < Math.min(files.length, processors); i++) {
+        for (int i = 0; i < Math.min(files.size(), processors); i++) {
             int finalI = i;
             Thread thread = new Thread(() -> {
                 int begin = finalI * portion, end;
-                if (finalI == Math.min(files.length, processors) - 1)
-                    end = files.length;
+                if (finalI == Math.min(files.size(), processors) - 1)
+                    end = files.size();
                 else
                     end = begin + portion;
-                for (int j = begin; j < end; j++) {
+                for (File f : files.subList(begin, end)) {
                     aux.getAndIncrement();
-                    File f = files[j];
                     Iterator<File> it = Tools.getFile(f, new ArrayList<>());
                     while (it.hasNext()) {
                         File file = it.next();
@@ -410,7 +407,7 @@ public class SortingMemories {
         for (Thread t : threads)
             t.join();
 
-        assert aux.get() == files.length;
+        assert aux.get() == files.size();
         progressBarPanel.setVisible(false);
         return sumVideos.get();
     }
@@ -451,8 +448,7 @@ public class SortingMemories {
                                 end = files.size();
                             else
                                 end = begin + portion;
-                            for (int j = begin; j < end; j++) {
-                                FileProperties fp = files.get(j);
+                            for (FileProperties fp : files.subList(begin, end)) {
                                 counter.getAndIncrement();
                                 synchronized (this) {
                                     progressBar1.setValue(counter.get());
@@ -499,9 +495,10 @@ public class SortingMemories {
                                     end = files.size();
                                 else
                                     end = begin + portion;
-                                for (int j = begin; j < end; j++) {
+
+                                for (FileProperties f : files.subList(begin, end)) {
                                     counter.getAndIncrement();
-                                    if (df.compareFiles(finalFileP, files.get(j), percentage, finalI))
+                                    if (df.compareFiles(finalFileP, f, percentage, finalI))
                                         found.set(true);
                                 }
                             });
@@ -528,13 +525,14 @@ public class SortingMemories {
         groups = df.getToDelete();
         progressBarPanel.setVisible(false);
         log.setText("");
-        logPanel.setVisible(false);
         if (!groups.hasNext()) {
+            logPanel.setVisible(false);
             panel2.setVisible(false);
             JOptionPane.showMessageDialog(null, "There aren't duplicated files!");
             textDir.setEnabled(true);
             searchButton.setEnabled(true);
         } else {
+            log.append("Files to be \"deleted\":\n");
             panel2.setVisible(true);
             index = 1;
             chooseToDelete();
@@ -577,7 +575,7 @@ public class SortingMemories {
             panel2.setVisible(false);
             textDir.setEnabled(true);
             searchButton.setEnabled(true);
-            JOptionPane.showMessageDialog(null, "Selected files were deleted!");
+            JOptionPane.showMessageDialog(null, "Selected files were \"deleted\"!");
         }
     }
 
