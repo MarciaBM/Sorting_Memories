@@ -37,6 +37,7 @@ public class SortingMemories {
             " If you already have a folder with this name please rename it. Do you want to continue?";
     private static final String WRONG_SELECTION = "Choose just images stages or just videos stages.";
     private static final String WRONG_PERCENTAGE = "Wrong percentage value.";
+    private static final int MULTIPLICATION = 3;
 
     private JPanel rootPanel;
     private static JFrame frame;
@@ -369,7 +370,7 @@ public class SortingMemories {
         AtomicInteger counter = new AtomicInteger();
         File[] files = folder.listFiles();
 
-        int processors = Runtime.getRuntime().availableProcessors() * 2;
+        int processors = Runtime.getRuntime().availableProcessors() * MULTIPLICATION;
         int portion;
         assert files != null;
         if (files.length <= processors)
@@ -428,7 +429,7 @@ public class SortingMemories {
         while (it.hasNext()) {
             stage++;
             List<FileProperties> files = it.next();
-            int processors = Runtime.getRuntime().availableProcessors() * 2;
+            int processors = Runtime.getRuntime().availableProcessors() * MULTIPLICATION;
             if (df.hasStage(stage) || df.hasStage(-1) || !df.getIsImage()) {
                 log.append("Loading stage " + stage + "...\n");
                 setProgressBar("Loading stage " + stage + "... (1/2)\n", files.size());
