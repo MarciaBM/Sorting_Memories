@@ -3,7 +3,6 @@ package duplicatedFiles;
 import file.*;
 import org.opencv.core.CvException;
 import org.opencv.core.Mat;
-import org.opencv.img_hash.AverageHash;
 import org.opencv.img_hash.ImgHashBase;
 import org.opencv.img_hash.PHash;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -48,7 +47,6 @@ public class DuplicatedFiles {
     private static final String KILL_MACOS = "killall Preview";
     private static final String KILL_LINUX = "pkill ";
     private static final String IMAGE_WIN = "rundll32 \"C:\\Program Files (x86)\\Windows Photo Viewer\\PhotoViewer.dll\", ImageView_Fullscreen ";
-    private static final String NO_DUPLICATED_FILES = "There aren't any duplicated files";
     private static final String TO_DELETE = "to delete";
     private static final String GET_APPS_SCRIPT = "getApps.sh";
     private static final String DIFF = "diff";
@@ -273,7 +271,9 @@ public class DuplicatedFiles {
             ImageProperties ip = (ImageProperties) fp;
             Mat mat;
             mat = Imgcodecs.imread(fp.getFile().getAbsolutePath());
-            ip.setHash(getHash(mat, ip.getHash()));
+            synchronized (this) {
+                ip.setHash(getHash(mat, ip.getHash()));
+            }
             mat.release();
         }
     }
@@ -350,7 +350,6 @@ public class DuplicatedFiles {
     }
 
     public void deleteFiles() {
-        boolean found = false;
         Iterator<List<FileProperties>> it;
         if (isImage)
             it = images.values().iterator();
@@ -363,12 +362,9 @@ public class DuplicatedFiles {
                     String toDeletePath = root + File.separator + TO_DELETE;
                     new File(toDeletePath).mkdirs(); //create folders
                     key.getFile().renameTo(new File(toDeletePath + File.separator + key.getFile().getName()));
-                    found = true;
                 }
             }
         }
-        if (!found)
-            System.out.println(NO_DUPLICATED_FILES);
     }
 
     public void closePreviews(int master) throws IOException, InterruptedException {

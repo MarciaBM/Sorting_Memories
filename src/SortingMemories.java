@@ -68,7 +68,7 @@ public class SortingMemories {
     private JLabel pBarDesc;
     private JScrollPane logPanel;
     private File folder;
-    private List<JCheckBox> checkBoxes;
+    private final List<JCheckBox> checkBoxes;
     private DuplicatedFiles df;
     private Iterator<Map.Entry<Integer, CopyOnWriteArrayList<FileProperties>>> groups;
     private int size;
@@ -261,13 +261,13 @@ public class SortingMemories {
         nextButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String answer = "";
+                StringBuilder answer = new StringBuilder();
                 for (int i = 0; i < size; i++) {
                     if ((boolean) table1.getValueAt(i, 0))
-                        answer += (i + 1) + " ";
+                        answer.append(i + 1).append(" ");
                 }
 
-                df.analyzeAnswer(answer, master);
+                df.analyzeAnswer(answer.toString(), master);
                 try {
                     df.closePreviews(master);
                     frame.setAlwaysOnTop(false);
@@ -429,49 +429,46 @@ public class SortingMemories {
             stage++;
             List<FileProperties> files = it.next();
             int processors = Runtime.getRuntime().availableProcessors() * 2;
-            int aux = 0;
             if (df.hasStage(stage) || df.hasStage(-1) || !df.getIsImage()) {
                 log.append("Loading stage " + stage + "...\n");
                 setProgressBar("Loading stage " + stage + "... (1/2)\n", files.size());
-                if (df.getIsImage()) {
-                    for (FileProperties fp : files) {
-                        df.definingHash(fp);
-                        progressBar1.setValue(aux++);
-                    }
-                } else
-                    System.out.println(VIDEOS);
 
-//                if (df.getIsImage()) {
-//                    setProgressBar("Stage " + stage + ": loading data (this might take a while)", files.size());
-//                    int portion;
-//                    if (files.size() <= processors)
-//                        portion = 1;
-//                    else
-//                        portion = (files.size()) / processors;
-//                    List<Thread> threads = new ArrayList<>();
-//                    AtomicInteger counter = new AtomicInteger();
-//
-//                    for (int i = 0; i < Math.min(files.size(), processors); i++) {
-//                        int finalI = i;
-//                        Thread thread = new Thread(() -> {
-//                            for (int j = finalI * portion; j < Math.min(finalI * portion + portion,files.size()); j++) {
-//                                FileProperties fp = files.get(j);
-//                                counter.getAndIncrement();
-//                                synchronized (this) {
-//                                    progressBar1.setValue(counter.get());
-//                                }
-//                                df.definingHash(fp);
-//                            }
-//                        });
-//                        threads.add(thread);
-//                        thread.start();
-//                    }
-//
-//                    for (Thread t : threads)
-//                        t.join();
-//                    progressBarPanel.setVisible(false);
-//                } else
-//                    log.append(VIDEOS + "\n");
+                if (df.getIsImage()) {
+                    int portion;
+                    if (files.size() <= processors)
+                        portion = 1;
+                    else
+                        portion = (files.size()) / processors;
+                    List<Thread> threads = new ArrayList<>();
+                    AtomicInteger counter = new AtomicInteger();
+
+                    for (int i = 0; i < Math.min(files.size(), processors); i++) {
+                        int finalI = i;
+                        Thread thread = new Thread(() -> {
+                            int begin = finalI * portion, end;
+                            if (finalI == Math.min(files.size(), processors) - 1)
+                                end = files.size();
+                            else
+                                end = begin + portion;
+                            for (int j = begin; j < end; j++) {
+                                FileProperties fp = files.get(j);
+                                counter.getAndIncrement();
+                                synchronized (this) {
+                                    progressBar1.setValue(counter.get());
+                                }
+                                df.definingHash(fp);
+                            }
+                        });
+                        threads.add(thread);
+                        thread.start();
+                    }
+
+                    for (Thread t : threads)
+                        t.join();
+                    assert counter.get() == files.size();
+                    progressBarPanel.setVisible(false);
+                } else
+                    log.append(VIDEOS + "\n");
 
                 progressBarPanel.setVisible(true);
                 log.append("Comparing files from stage " + stage + "...\n");
@@ -544,7 +541,10 @@ public class SortingMemories {
     }
 
     private void chooseToDelete() {
-        nextButton.setText("Next (" + index + "/" + df.getChoosingGroupsSize() + ")");
+        if (index == df.getChoosingGroupsSize())
+            nextButton.setText("Finish");
+        else
+            nextButton.setText("Next (" + index + "/" + df.getChoosingGroupsSize() + ")");
         if (groups.hasNext()) {
             Map.Entry<Integer, CopyOnWriteArrayList<FileProperties>> entry = groups.next();
             CopyOnWriteArrayList<FileProperties> list = entry.getValue();
