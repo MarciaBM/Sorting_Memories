@@ -12,10 +12,8 @@ import javax.imageio.ImageReader;
 import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.ImageInputStream;
 import java.awt.*;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -174,15 +172,19 @@ public class DuplicatedFiles {
     }
 
     private void loadLib() {
-        File lib;
-        if (osType == OSType.WINDOWS)
-            lib = new File(PATH_LIBS + File.separator + LIB_WIN);
-        else if (osType == OSType.MACOS)
-            lib = new File(PATH_LIBS + File.separator + LIB_MACOS);
-        else
-            lib = new File(PATH_LIBS + File.separator + LIB_LINUX);
-
-        System.load(lib.getAbsolutePath());
+        try {
+            String lib;
+            if (osType == OSType.WINDOWS)
+                lib = LIB_WIN;
+            else if (osType == OSType.MACOS)
+                lib = LIB_MACOS;
+            else
+                lib = LIB_LINUX;
+            String libName = PATH_LIBS + File.separator + lib; // The name of the file in resources/ dir
+            System.load(getPathJarCompatibility(libName, lib));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public String getApp() {
@@ -312,10 +314,24 @@ public class DuplicatedFiles {
         return found;
     }
 
-    public void permissionApp() throws IOException {
+    public String permissionApp() throws IOException {
         ProcessBuilder processBuilder = new ProcessBuilder();
-        processBuilder.command("chmod", "+x", GET_APPS_SCRIPT);
+        String path = getPathJarCompatibility(GET_APPS_SCRIPT, GET_APPS_SCRIPT);
+        processBuilder.command("chmod", "+x", path);
         processBuilder.start();
+        return path;
+    }
+
+    private String getPathJarCompatibility(String getAppsScript, String getAppsScript2) throws IOException {
+        URL url = getClass().getResource("/" + getAppsScript);
+        File tmpDir = Files.createTempDirectory("my-native-lib").toFile();
+        tmpDir.deleteOnExit();
+        File nativeLibTmpFile = new File(tmpDir, getAppsScript2);
+        nativeLibTmpFile.deleteOnExit();
+        assert url != null;
+        InputStream in = url.openStream();
+        Files.copy(in, nativeLibTmpFile.toPath());
+        return nativeLibTmpFile.getAbsolutePath();
     }
 
     private List<String> runProcess(ProcessBuilder processBuilder) throws IOException {
@@ -329,9 +345,9 @@ public class DuplicatedFiles {
         return result;
     }
 
-    public Iterator<String> apps() throws IOException {
+    public Iterator<String> apps(String scriptLoc) throws IOException {
         ProcessBuilder processBuilder = new ProcessBuilder();
-        processBuilder.command("./" + GET_APPS_SCRIPT);
+        processBuilder.command(scriptLoc);
         return runProcess(processBuilder).iterator();
     }
 
@@ -385,7 +401,7 @@ public class DuplicatedFiles {
     public String analyzeAnswer(String answer, int master) {
         StringBuilder res = new StringBuilder();
         CopyOnWriteArrayList<FileProperties> list = choosingGroups.get(master);
-        if(!answer.equals("")) {
+        if (!answer.equals("")) {
             String[] numbers = answer.split(" ");
             for (String s : numbers) {
                 int index = Integer.parseInt(s) - 1;
