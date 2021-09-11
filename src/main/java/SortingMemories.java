@@ -196,6 +196,9 @@ public class SortingMemories {
                                 panel1.setVisible(true);
                             }
                         }.execute();
+                    } else {
+                        searchButton.setEnabled(true);
+                        textDir.setEnabled(true);
                     }
                 } catch (ScriptException scriptException) {
                     scriptException.printStackTrace();
@@ -459,7 +462,11 @@ public class SortingMemories {
                                 synchronized (this) {
                                     progressBar1.setValue(counter.get());
                                 }
-                                df.definingHash(fp);
+                                try {
+                                    df.definingHash(fp);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
                             }
                         });
                         threads.add(thread);

@@ -3,6 +3,7 @@ package duplicatedFiles;
 import file.*;
 import org.opencv.core.CvException;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
 import org.opencv.img_hash.ImgHashBase;
 import org.opencv.img_hash.PHash;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -270,11 +271,15 @@ public class DuplicatedFiles {
         }
     }
 
-    public void definingHash(FileProperties fp) {
+    public void definingHash(FileProperties fp) throws IOException {
         if (fp instanceof ImageProperties) {
             ImageProperties ip = (ImageProperties) fp;
             Mat mat;
             mat = Imgcodecs.imread(fp.getFile().getAbsolutePath());
+            if(mat.empty()){
+                byte[] bytes = Files.readAllBytes(fp.getFile().toPath());
+                mat = Imgcodecs.imdecode(new MatOfByte(bytes), Imgcodecs.IMREAD_UNCHANGED);
+            }
             synchronized (this) {
                 ip.setHash(getHash(mat, ip.getHash()));
             }
@@ -323,13 +328,11 @@ public class DuplicatedFiles {
     }
 
     private String getPathJarCompatibility(String getAppsScript, String getAppsScript2) throws IOException {
-        URL url = getClass().getResource(File.separator + getAppsScript);
+        InputStream in = getClass().getClassLoader().getResourceAsStream(getAppsScript);
         File tmpDir = Files.createTempDirectory("my-native-lib").toFile();
         tmpDir.deleteOnExit();
         File nativeLibTmpFile = new File(tmpDir, getAppsScript2);
         nativeLibTmpFile.deleteOnExit();
-        assert url != null;
-        InputStream in = url.openStream();
         Files.copy(in, nativeLibTmpFile.toPath());
         return nativeLibTmpFile.getAbsolutePath();
     }

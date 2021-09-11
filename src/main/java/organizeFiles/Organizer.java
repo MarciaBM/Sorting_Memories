@@ -57,17 +57,19 @@ public class Organizer {
             Iterator<File> it = Tools.getFile(f, new ArrayList<>());
             while (it.hasNext()) {
                 File file = it.next();
-                LocalDateTime dateFile = Tools.getExifDate(file);
-                String[] pathFile = file.getPath().split(root.getName());
+                if(!file.getName().equals("desktop.ini")) {
+                    LocalDateTime dateFile = Tools.getExifDate(file);
+                    String[] pathFile = file.getPath().split(root.getName());
 
-                String path;
-                if (dateFile != null) {
-                    path = gotOrganized(file, String.valueOf(dateFile.getYear()), pathFile, false);
-                } else {
-                    path = gotOrganized(file, UNKNOWN_DATE, pathFile, true);
+                    String path;
+                    if (dateFile != null) {
+                        path = gotOrganized(file, String.valueOf(dateFile.getYear()), pathFile, false);
+                    } else {
+                        path = gotOrganized(file, UNKNOWN_DATE, pathFile, true);
+                    }
+                    if (path != null)
+                        moved.add(path);
                 }
-                if (path != null)
-                    moved.add(path);
             }
         }
         return moved.iterator();
