@@ -37,7 +37,6 @@ public class DuplicatedFiles {
     private static final String WINDOWS = "windows";
     private static final String MACOS = "mac";
     private static final String RIGHT_SLASH = "/";
-    private static final String PATH_LIBS = "libs";
     private static final String LIB_WIN = "opencv_java451.dll";
     private static final String LIB_MACOS = "libopencv_java440.dylib";
     private static final String LIB_LINUX = "libopencv_java451.so";
@@ -181,8 +180,7 @@ public class DuplicatedFiles {
                 lib = LIB_MACOS;
             else
                 lib = LIB_LINUX;
-            String libName = PATH_LIBS + File.separator + lib; // The name of the file in resources/ dir
-            System.load(getPathJarCompatibility(libName, lib));
+            System.load(getPathJarCompatibility(lib));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -321,17 +319,23 @@ public class DuplicatedFiles {
 
     public String permissionApp() throws IOException {
         ProcessBuilder processBuilder = new ProcessBuilder();
-        String path = getPathJarCompatibility(GET_APPS_SCRIPT, GET_APPS_SCRIPT);
+        String path = getPathJarCompatibility(GET_APPS_SCRIPT);
         processBuilder.command("chmod", "+x", path);
         processBuilder.start();
         return path;
     }
 
-    private String getPathJarCompatibility(String getAppsScript, String getAppsScript2) throws IOException {
-        InputStream in = getClass().getClassLoader().getResourceAsStream(getAppsScript);
+    private String getPathJarCompatibility(String name) throws IOException {
+        InputStream in = getClass().getClassLoader().getResourceAsStream(name);
+//        if(in == null)
+//            in = getClass().getResourceAsStream(File.separator + getAppsScript);
+//        if(in == null)
+//            in = getClass().getResourceAsStream(getAppsScript);
+//        if(in == null)
+//            in = getClass().getClassLoader().getResourceAsStream(File.separator + getAppsScript);
         File tmpDir = Files.createTempDirectory("my-native-lib").toFile();
         tmpDir.deleteOnExit();
-        File nativeLibTmpFile = new File(tmpDir, getAppsScript2);
+        File nativeLibTmpFile = new File(tmpDir, name);
         nativeLibTmpFile.deleteOnExit();
         Files.copy(in, nativeLibTmpFile.toPath());
         return nativeLibTmpFile.getAbsolutePath();
