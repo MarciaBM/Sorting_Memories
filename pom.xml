@@ -27,6 +27,7 @@
             <artifactId>opencv</artifactId>
             <version>4.5.1-1.5.5</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.formdev/flatlaf -->
         <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf</artifactId>
@@ -67,5 +68,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

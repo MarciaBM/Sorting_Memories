@@ -323,7 +323,7 @@ public class DuplicatedFiles {
     }
 
     private String getPathJarCompatibility(String getAppsScript, String getAppsScript2) throws IOException {
-        URL url = getClass().getResource("/" + getAppsScript);
+        URL url = getClass().getResource(File.separator + getAppsScript);
         File tmpDir = Files.createTempDirectory("my-native-lib").toFile();
         tmpDir.deleteOnExit();
         File nativeLibTmpFile = new File(tmpDir, getAppsScript2);
