@@ -43,28 +43,15 @@ public class Tools {
 
     public static int deleteEmptyFolders(File folder, int counter) {
         if (folder.isDirectory()) {
-            if(folder.listFiles() != null) {
-                if (folder.listFiles().length > 1) {
-                    File[] folders = folder.listFiles();
-                    for (File insideFolder : folders) {
-                        counter = deleteEmptyFolders(insideFolder, counter);
-                    }
-                } else if (folder.listFiles().length == 0) {
-                    folder.delete();
-                    counter++;
-                } else if (folder.listFiles().length == 1) {
-                    File[] folders = folder.listFiles();
-                    File file = folders[0];
-                    if (file.isFile() && file.getName().equals("desktop.ini")) {
-                        file.delete();
-                        folder.delete();
-                        counter++;
-                    } else {
-                        for (File insideFolder : folders) {
-                            counter = deleteEmptyFolders(insideFolder, counter);
-                        }
-                    }
+            if (folder.listFiles().length > 0) {
+                File[] folders = folder.listFiles();
+                for (File insideFolder : folders) {
+                    counter = deleteEmptyFolders(insideFolder, counter);
                 }
+            }
+            if (folder.listFiles().length == 0) {
+                folder.delete();
+                counter++;
             }
         }
         return counter;

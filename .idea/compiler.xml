@@ -10,5 +10,9 @@
         <module name="Sorting_Memories" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="Sorting_Memories" target="11" />
+      <module name="SortingMemories" target="11" />
+    </bytecodeTargetLevel>
   </component>
 </project>

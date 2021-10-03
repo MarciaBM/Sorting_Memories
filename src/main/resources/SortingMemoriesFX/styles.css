@@ -1,0 +1,20 @@
+.topBar{
+    -fx-background-color: linear-gradient(to bottom, #0093E9, #80D0C7);
+}
+.mainButtons{
+    -fx-background-color: white;
+}
+.mainButtons:hover{
+    -fx-border-color: #0093E9;
+}
+.buttonSearch{
+    -fx-text-fill: #0093E9;
+    -fx-border-color: #0093E9;
+    -fx-background-color: transparent;
+    -fx-border-radius: 30px;
+}
+.buttonSearch:hover{
+    -fx-text-fill: #25c7b5;
+    -fx-border-color: #25c7b5;
+    -fx-border-radius: 30px;
+}
