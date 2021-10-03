@@ -327,16 +327,11 @@ public class DuplicatedFiles {
 
     private String getPathJarCompatibility(String name) throws IOException {
         InputStream in = getClass().getClassLoader().getResourceAsStream(name);
-//        if(in == null)
-//            in = getClass().getResourceAsStream(File.separator + getAppsScript);
-//        if(in == null)
-//            in = getClass().getResourceAsStream(getAppsScript);
-//        if(in == null)
-//            in = getClass().getClassLoader().getResourceAsStream(File.separator + getAppsScript);
         File tmpDir = Files.createTempDirectory("my-native-lib").toFile();
         tmpDir.deleteOnExit();
         File nativeLibTmpFile = new File(tmpDir, name);
         nativeLibTmpFile.deleteOnExit();
+        assert in != null;
         Files.copy(in, nativeLibTmpFile.toPath());
         return nativeLibTmpFile.getAbsolutePath();
     }
