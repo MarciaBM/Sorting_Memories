@@ -27,7 +27,7 @@ public class SortingMemories extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(SortingMemories.class.getResource("sorting-memories.fxml"));
-        stage.setTitle("Sorting Memories!");
+        stage.setTitle("Sorting Memories");
         Scene scene = new Scene(fxmlLoader.load());
         stage.setScene(scene);
         stage.show();

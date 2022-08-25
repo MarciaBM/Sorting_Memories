@@ -210,7 +210,7 @@ public class SortingMemoriesController {
     void defAction(ActionEvent event) {
         try {
             checkDirectory();
-            alertDialog(Alert.AlertType.INFORMATION,Tools.deleteEmptyFolders(folder, 0) + CONFIRMATION_EMPTY_FOLDERS);
+            alertDialog(Alert.AlertType.INFORMATION, Tools.deleteEmptyFolders(folder, 0) + CONFIRMATION_EMPTY_FOLDERS);
         } catch (ScriptException scriptException) {
             scriptException.printStackTrace();
         }
@@ -220,7 +220,7 @@ public class SortingMemoriesController {
     @FXML
     void ddfAction(ActionEvent event) {
 
-           // checkDirectory();
+        // checkDirectory();
         /*    textDir.setEnabled(false);
             frame.setAlwaysOnTop(false);
             searchButton.setEnabled(false);
@@ -230,49 +230,49 @@ public class SortingMemoriesController {
             logPanel.setVisible(false);
             log.setText("");*/
 
-            Optional<ButtonType> res = alertDialog(Alert.AlertType.CONFIRMATION,WARNING_STAGES);
-            if (res.get() == ButtonType.OK) {
-                mainMenu.setVisible(false);
-                progressBox.setVisible(true);
-                progressBarText.setText(LOADING_FILES);
-                searchButton.setDisable(true);
-                rootDirectory.setDisable(true);
-                checkBoxes.add(checkBox1);
-                checkBoxes.add(checkBox2);
-                checkBoxes.add(checkBox3);
-                checkBoxes.add(checkBox4);
-                checkBoxes.add(checkBox5);
-                checkBoxes.add(checkBox6);
-                checkBoxes.add(checkBox7);
-                checkBoxes.add(checkBox8);
-                checkBoxes.add(checkBox9);
-                checkBoxes.add(checkBox10);
-                df = new DuplicatedFiles(folder);
-                new Thread(){
-                    public void run() {
-                        try {
-                            int sumVideos = 0;
-                            sumVideos = deleteDuplicatedFiles();
-                            int finalSumVideos = sumVideos;
-                            Platform.runLater(() ->  printStages(finalSumVideos));
-                            stage.setHeight(580);
-                            stagesPane.setVisible(true);
-                            progressBox.setVisible(false);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-
-
+        Optional<ButtonType> res = alertDialog(Alert.AlertType.CONFIRMATION, WARNING_STAGES);
+        if (res.get() == ButtonType.OK) {
+            mainMenu.setVisible(false);
+            progressBox.setVisible(true);
+            progressBarText.setText(LOADING_FILES);
+            searchButton.setDisable(true);
+            rootDirectory.setDisable(true);
+            checkBoxes.add(checkBox1);
+            checkBoxes.add(checkBox2);
+            checkBoxes.add(checkBox3);
+            checkBoxes.add(checkBox4);
+            checkBoxes.add(checkBox5);
+            checkBoxes.add(checkBox6);
+            checkBoxes.add(checkBox7);
+            checkBoxes.add(checkBox8);
+            checkBoxes.add(checkBox9);
+            checkBoxes.add(checkBox10);
+            df = new DuplicatedFiles(folder);
+            new Thread() {
+                public void run() {
+                    try {
+                        int sumVideos = 0;
+                        sumVideos = deleteDuplicatedFiles();
+                        int finalSumVideos = sumVideos;
+                        Platform.runLater(() -> printStages(finalSumVideos));
+                        stage.setHeight(580);
+                        stagesPane.setVisible(true);
+                        progressBox.setVisible(false);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
                     }
-                }.start();
 
-            }
+
+                }
+            }.start();
+
+        }
 
 
     }
 
     @FXML
-    void nextButtonAction(ActionEvent event){
+    void nextButtonAction(ActionEvent event) {
 
         try {
             boolean exists = false;
@@ -305,30 +305,30 @@ public class SortingMemoriesController {
             int percentage = getPercentage();
             stagesPane.setVisible(false);
             if (df.getIsImage()) {
-                Platform.runLater(()-> {
+                Platform.runLater(() -> {
                     try {
                         iteratingMaps(percentage);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 });
-            } else{
-                Platform.runLater(()-> {
+            } else {
+                Platform.runLater(() -> {
                     try {
                         iteratingMaps(-1);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 });
-        }
+            }
 
 
-        } catch (ScriptException  scriptException) {
+        } catch (ScriptException scriptException) {
             stagesPane.setVisible(true);
             scriptException.printStackTrace();
         }
 
-        }
+    }
 
 
     /*Organize by day*/
@@ -342,6 +342,7 @@ public class SortingMemoriesController {
     void ofbmAction(ActionEvent event) {
 
     }
+
     /*Organize by year*/
     @FXML
     void ofbyAction(ActionEvent event) {
@@ -349,19 +350,18 @@ public class SortingMemoriesController {
     }
 
 
-
     private void checkDirectory() throws ScriptException {
         if (folder == null) {
             File aux = new File(rootDirectory.getText());
             if (!aux.isDirectory()) {
-                alertDialog(Alert.AlertType.WARNING,INSERT_FOLDER);
+                alertDialog(Alert.AlertType.WARNING, INSERT_FOLDER);
                 throw new ScriptException(INSERT_FOLDER);
             } else
                 folder = aux;
         }
     }
 
-    private Optional<ButtonType> alertDialog(Alert.AlertType alertType, String text){
+    private Optional<ButtonType> alertDialog(Alert.AlertType alertType, String text) {
         Alert alert = new Alert(alertType);
         alert.setTitle(alertType.toString());
         alert.setHeaderText(null);
@@ -369,6 +369,7 @@ public class SortingMemoriesController {
         alert.getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
         return alert.showAndWait();
     }
+
     private int deleteDuplicatedFiles() throws InterruptedException {
         AtomicInteger sumVideos = new AtomicInteger();
         int total = (int) df.fileCount(folder.toPath());
@@ -385,7 +386,7 @@ public class SortingMemoriesController {
         List<Thread> threads = new ArrayList<>();
         AtomicInteger aux = new AtomicInteger();
 
-      //  setProgressBar(LOADING_FILES, total);
+        //  setProgressBar(LOADING_FILES, total);
         for (int i = 0; i < Math.min(files.size(), processors); i++) {
             int finalI = i;
             Thread thread = new Thread(() -> {
@@ -404,7 +405,7 @@ public class SortingMemoriesController {
                             double progress = (double) counter.get() / total;
                             System.out.println(progress);
                             progressBar.setProgress(progress);
-                   //         progressBar.setProgress(counter.get());
+                            //         progressBar.setProgress(counter.get());
 
                         }
                         sumVideos.addAndGet(df.deleteDuplicatedFiles(file));
@@ -419,9 +420,10 @@ public class SortingMemoriesController {
             t.join();
 
         assert aux.get() == files.size();
-       // progressBarPanel.setVisible(false);
+        // progressBarPanel.setVisible(false);
         return sumVideos.get();
     }
+
     private void printStages(int sumVideos) {
         Iterator<List<FileProperties>> it = df.getAllImages();
         for (int i = 0; i < 9; i++) {
@@ -430,22 +432,21 @@ public class SortingMemoriesController {
             cb.setText("Stage " + (i + 1) + ": " + size + " images");
 
         }
-          checkBox10.setText("Stage V - Total videos and others: " + sumVideos + " files");
+        checkBox10.setText("Stage V - Total videos and others: " + sumVideos + " files");
+    }
 
-        }
     private int getPercentage() throws ScriptException {
         String answer = percentageText.getText();
         if (answer.matches("[0-9]+")) {
             int percentage = Integer.parseInt(answer);
             if (percentage >= 0 && percentage <= 100)
                 return percentage;
-            alertDialog(Alert.AlertType.WARNING,WRONG_PERCENTAGE);
+            alertDialog(Alert.AlertType.WARNING, WRONG_PERCENTAGE);
             throw new ScriptException("");
         }
-        alertDialog(Alert.AlertType.WARNING,WRONG_PERCENTAGE);
+        alertDialog(Alert.AlertType.WARNING, WRONG_PERCENTAGE);
         throw new ScriptException("");
     }
-
 
 
     private void iteratingMaps(int percentage) throws InterruptedException {
@@ -460,7 +461,7 @@ public class SortingMemoriesController {
         else
             it = df.getAllVideos();
 
-      //  logPanel.setVisible(true);
+        //  logPanel.setVisible(true);
         while (it.hasNext()) {
             stage++;
             List<FileProperties> files = it.next();
@@ -492,8 +493,8 @@ public class SortingMemoriesController {
                             for (FileProperties fp : files.subList(begin, end)) {
                                 counter.getAndIncrement();
                                 synchronized (this) {
-                                    System.out.println(counter.get()/files.size()+"...\n");
-                                    progressBar.setProgress(counter.get()/files.size());
+                                    System.out.println(counter.get() / files.size() + "...\n");
+                                    progressBar.setProgress(counter.get() / files.size());
                                 }
                                 try {
                                     df.definingHash(fp);
@@ -513,7 +514,7 @@ public class SortingMemoriesController {
                 } else
                     //log.append(VIDEOS + "\n");
 
-                progressBox.setVisible(true);
+                    progressBox.setVisible(true);
                 //log.append("Comparing files from stage " + stage + "...\n");
                 System.out.println("Comparing files from stage " + stage + "...\n");
                 progressBarText.setText("Comparing files... (2/2)");
@@ -565,7 +566,7 @@ public class SortingMemoriesController {
 
                         System.gc();
                     }
-                    progressBar.setProgress(i/(files.size() - 1));
+                    progressBar.setProgress(i / (files.size() - 1));
                 }
             }
         }
@@ -602,30 +603,25 @@ public class SortingMemoriesController {
             index++;
 
 
-
             VBox vBox = new VBox();
-
+            vBox.setSpacing(30);
             for (FileProperties fp : list) {
-                HBox hBox = new HBox();
+                VBox inside = new VBox();
                 String text = fp.getFile().getAbsolutePath();
 
-                hBox.getChildren().add(new CheckBox(text));
-                hBox.setSpacing(20);
                 File f = fp.getFile();
                 Image image = new Image(f.toURI().toString());
                 ImageView imageView = new ImageView(image);
-                hBox.getChildren().add((imageView));
-                vBox.getChildren().add(hBox);
+                imageView.setPreserveRatio(true);
+                imageView.setFitHeight(250);
+                inside.getChildren().add((imageView));
+                inside.getChildren().add(new CheckBox(text));
+                inside.setSpacing(10);
+                vBox.getChildren().add(inside);
                 scrollViewImages.setContent(vBox);
             }
 
-
-
-
-
         } else {
-
-
             JOptionPane.showMessageDialog(null, "Selected files were \"deleted\"!");
         }
     }
