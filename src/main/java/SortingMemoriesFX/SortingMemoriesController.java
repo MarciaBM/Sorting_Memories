@@ -6,7 +6,6 @@ import file.Tools;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
@@ -133,7 +132,10 @@ public class SortingMemoriesController {
     private CheckBox checkBox10;
 
     @FXML
-    private Button stagesNextButton;
+    private Button nextGroup;
+
+    @FXML
+    private Button stopHere;
 
     @FXML
     private Text progressBarText;
@@ -147,6 +149,12 @@ public class SortingMemoriesController {
 
     @FXML
     private ScrollPane scrollViewImages;
+
+    @FXML
+    private Pane paneChooseToDelete;
+
+    @FXML
+    private TextField groupsCount;
 
 
     @FXML
@@ -255,24 +263,18 @@ public class SortingMemoriesController {
                         sumVideos = deleteDuplicatedFiles();
                         int finalSumVideos = sumVideos;
                         Platform.runLater(() -> printStages(finalSumVideos));
-                        stage.setHeight(580);
                         stagesPane.setVisible(true);
                         progressBox.setVisible(false);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-
-
                 }
             }.start();
-
         }
-
-
     }
 
     @FXML
-    void nextButtonAction(ActionEvent event) {
+    void continueButtonAction(ActionEvent event) {
 
         try {
             boolean exists = false;
@@ -328,6 +330,11 @@ public class SortingMemoriesController {
             scriptException.printStackTrace();
         }
 
+    }
+
+    @FXML
+    void nextButtonAction(ActionEvent event) {
+        chooseToDelete();
     }
 
 
@@ -493,7 +500,7 @@ public class SortingMemoriesController {
                             for (FileProperties fp : files.subList(begin, end)) {
                                 counter.getAndIncrement();
                                 synchronized (this) {
-                                    System.out.println(counter.get() / files.size() + "...\n");
+//                                    System.out.println(counter.get() / files.size() + "...\n");
                                     progressBar.setProgress(counter.get() / files.size());
                                 }
                                 try {
@@ -581,7 +588,10 @@ public class SortingMemoriesController {
         } else {
             //log.append("Files to be \"deleted\":\n");
             System.out.println("Files to be \"deleted\":\n");
+            paneChooseToDelete.setVisible(true);
             scrollViewImages.setVisible(true);
+            nextGroup.setVisible(true);
+            stopHere.setVisible(true);
             index = 1;
             chooseToDelete();
 
@@ -592,16 +602,20 @@ public class SortingMemoriesController {
         stage = stageC;
     }
 
+    private Map<CheckBox,FileProperties> filesCurrentGroup = new HashMap<>();
     private void chooseToDelete() {
-       /* if (index == df.getChoosingGroupsSize())
-            nextButton.setText("Finish");
-        else
-            nextButton.setText("Next (" + index + "/" + df.getChoosingGroupsSize() + ")");*/
+        if (!filesCurrentGroup.isEmpty()){
+            for(Map.Entry<CheckBox,FileProperties> entry : filesCurrentGroup.entrySet()){
+                if(entry.getKey().isSelected())
+                    entry.getValue().setToDelete(true);
+            }
+            filesCurrentGroup.clear();
+        }
         if (groups.hasNext()) {
             Map.Entry<Integer, CopyOnWriteArrayList<FileProperties>> entry = groups.next();
             CopyOnWriteArrayList<FileProperties> list = entry.getValue();
+            groupsCount.setText("Group " + index + " of " + df.getChoosingGroupsSize());
             index++;
-
 
             VBox vBox = new VBox();
             vBox.setSpacing(30);
@@ -615,14 +629,33 @@ public class SortingMemoriesController {
                 imageView.setPreserveRatio(true);
                 imageView.setFitHeight(250);
                 inside.getChildren().add((imageView));
-                inside.getChildren().add(new CheckBox(text));
+                CheckBox cb = new CheckBox(text);
+                filesCurrentGroup.put(cb,fp);
+                inside.getChildren().add(cb);
                 inside.setSpacing(10);
                 vBox.getChildren().add(inside);
                 scrollViewImages.setContent(vBox);
             }
 
         } else {
-            JOptionPane.showMessageDialog(null, "Selected files were \"deleted\"!");
+            stopSelection();
+        }
+    }
+
+    @FXML
+    void stopSelectionAction(ActionEvent event) {
+        stopSelection();
+    }
+    private void stopSelection(){
+        df.deleteFiles();
+        Object[] options = {"Back to Stages", "Main Menu", "Exit"};
+        int option = JOptionPane.showOptionDialog(null, "Selected files were \"deleted\"!",null, JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE,null, options, options[0]);
+        if(option == 0){
+            System.out.println(0);
+        } else if(option == 1){
+            System.out.println(1);
+        }else{
+            System.exit(0);
         }
     }
 }

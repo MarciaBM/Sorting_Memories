@@ -274,7 +274,7 @@ public class DuplicatedFiles {
             ImageProperties ip = (ImageProperties) fp;
             Mat mat;
             mat = Imgcodecs.imread(fp.getFile().getAbsolutePath());
-            if(mat.empty()){
+            if (mat.empty()) {
                 byte[] bytes = Files.readAllBytes(fp.getFile().toPath());
                 mat = Imgcodecs.imdecode(new MatOfByte(bytes), Imgcodecs.IMREAD_UNCHANGED);
             }
@@ -375,12 +375,14 @@ public class DuplicatedFiles {
             it = images.values().iterator();
         else
             it = videos.values().iterator();
+        String toDeletePath = root + File.separator + TO_DELETE;
+        if(it.hasNext()){
+            new File(toDeletePath).mkdirs();
+        }
         while (it.hasNext()) {
             List<FileProperties> list = it.next();
             for (FileProperties key : list) {
                 if (key.getToDelete()) {
-                    String toDeletePath = root + File.separator + TO_DELETE;
-                    new File(toDeletePath).mkdirs(); //create folders
                     key.getFile().renameTo(new File(toDeletePath + File.separator + key.getFile().getName()));
                 }
             }
