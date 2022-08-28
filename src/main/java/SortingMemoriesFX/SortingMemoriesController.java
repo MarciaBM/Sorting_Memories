@@ -140,7 +140,8 @@ public class SortingMemoriesController {
     @FXML
     private Text progressBarText;
 
-
+    @FXML
+    private Text pbPercentage;
     @FXML
     private ProgressBar progressBar;
 
@@ -260,8 +261,10 @@ public class SortingMemoriesController {
                 public void run() {
                     try {
                         int sumVideos = 0;
+                        //load all files metadata
                         sumVideos = deleteDuplicatedFiles();
                         int finalSumVideos = sumVideos;
+                        //choosing stages
                         Platform.runLater(() -> printStages(finalSumVideos));
                         stagesPane.setVisible(true);
                         progressBox.setVisible(false);
@@ -273,9 +276,9 @@ public class SortingMemoriesController {
         }
     }
 
+    //after choosing stages
     @FXML
     void continueButtonAction(ActionEvent event) {
-
         try {
             boolean exists = false;
             boolean all = true;
@@ -307,20 +310,10 @@ public class SortingMemoriesController {
             int percentage = getPercentage();
             stagesPane.setVisible(false);
             if (df.getIsImage()) {
-                Platform.runLater(() -> {
-                    try {
-                        iteratingMaps(percentage);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                });
+                iteratingMaps(percentage);
             } else {
                 Platform.runLater(() -> {
-                    try {
-                        iteratingMaps(-1);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                    iteratingMaps(-1);
                 });
             }
 
@@ -329,7 +322,6 @@ public class SortingMemoriesController {
             stagesPane.setVisible(true);
             scriptException.printStackTrace();
         }
-
     }
 
     @FXML
@@ -377,6 +369,7 @@ public class SortingMemoriesController {
         return alert.showAndWait();
     }
 
+    //when loading files metadata... first step
     private int deleteDuplicatedFiles() throws InterruptedException {
         AtomicInteger sumVideos = new AtomicInteger();
         int total = (int) df.fileCount(folder.toPath());
@@ -410,10 +403,9 @@ public class SortingMemoriesController {
                         counter.getAndIncrement();
                         synchronized (this) {
                             double progress = (double) counter.get() / total;
-                            System.out.println(progress);
                             progressBar.setProgress(progress);
-                            //         progressBar.setProgress(counter.get());
-
+                            int p = (int) (progress * 100);
+                            pbPercentage.setText(p + "%");
                         }
                         sumVideos.addAndGet(df.deleteDuplicatedFiles(file));
                     }
@@ -456,157 +448,163 @@ public class SortingMemoriesController {
     }
 
 
-    private void iteratingMaps(int percentage) throws InterruptedException {
-        int stage = 0;
-        FileProperties fileP;
-        Iterator<List<FileProperties>> it;
-        progressBox.setVisible(true);
-        progressBar.setVisible(true);
+    private void iteratingMaps(int percentage) {
+        new Thread() {
+            public void run() {
+                try {
+                    Iterator<List<FileProperties>> it;
+                    progressBox.setVisible(true);
+                    progressBar.setVisible(true);
 
-        if (df.getIsImage())
-            it = df.getAllImages();
-        else
-            it = df.getAllVideos();
-
-        //  logPanel.setVisible(true);
-        while (it.hasNext()) {
-            stage++;
-            List<FileProperties> files = it.next();
-            int processors = Runtime.getRuntime().availableProcessors() * MULTIPLICATION;
-            if (df.hasStage(stage) || df.hasStage(-1) || !df.getIsImage()) {
-                //log.append("Loading stage " + stage + "...\n");
-                System.out.println("Loading stage " + stage + "...\n");
-                progressBox.setVisible(true);
-                progressBarText.setText("Loading stage " + stage + "... (1/2)\n");
-
-
-                if (df.getIsImage()) {
-                    int portion;
-                    if (files.size() <= processors)
-                        portion = 1;
+                    if (df.getIsImage())
+                        it = df.getAllImages();
                     else
-                        portion = (files.size()) / processors;
-                    List<Thread> threads = new ArrayList<>();
-                    AtomicInteger counter = new AtomicInteger();
+                        it = df.getAllVideos();
+                    int stage = 0;
+                    FileProperties fileP;
+                    while (it.hasNext()) {
+                        stage++;
+                        List<FileProperties> files = it.next();
+                        int processors = Runtime.getRuntime().availableProcessors() * MULTIPLICATION;
+                        if (df.hasStage(stage) || df.hasStage(-1) || !df.getIsImage()) {
+                            System.out.println("Loading stage " + stage + "...\n");
+                            progressBarText.setText("Loading stage " + stage);
 
-                    for (int i = 0; i < Math.min(files.size(), processors); i++) {
-                        int finalI = i;
-                        Thread thread = new Thread(() -> {
-                            int begin = finalI * portion, end;
-                            if (finalI == Math.min(files.size(), processors) - 1)
-                                end = files.size();
-                            else
-                                end = begin + portion;
-                            for (FileProperties fp : files.subList(begin, end)) {
-                                counter.getAndIncrement();
-                                synchronized (this) {
-//                                    System.out.println(counter.get() / files.size() + "...\n");
-                                    progressBar.setProgress(counter.get() / files.size());
+                            if (df.getIsImage()) {
+                                int portion;
+                                if (files.size() <= processors)
+                                    portion = 1;
+                                else
+                                    portion = (files.size()) / processors;
+                                List<Thread> threads = new ArrayList<>();
+                                AtomicInteger counter = new AtomicInteger();
+
+                                for (int i = 0; i < Math.min(files.size(), processors); i++) {
+                                    int finalI = i;
+                                    Thread thread = new Thread(() -> {
+                                        int begin = finalI * portion, end;
+                                        if (finalI == Math.min(files.size(), processors) - 1)
+                                            end = files.size();
+                                        else
+                                            end = begin + portion;
+                                        for (FileProperties fp : files.subList(begin, end)) {
+                                            counter.getAndIncrement();
+                                            synchronized (this) {
+                                                double progress = (double) counter.get() / files.size();
+                                                progressBar.setProgress(progress);
+                                                int p = (int) (progress * 100);
+                                                pbPercentage.setText(p + "%");
+                                            }
+                                            try {
+                                                df.definingHash(fp);
+                                            } catch (IOException e) {
+                                                e.printStackTrace();
+                                            }
+                                        }
+                                    });
+                                    threads.add(thread);
+                                    thread.start();
                                 }
-                                try {
-                                    df.definingHash(fp);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
+
+                                for (Thread t : threads)
+                                    t.join();
+                                assert counter.get() == files.size();
+                            }
+                            System.out.println("Comparing files from stage " + stage + "...\n");
+                            progressBarText.setText("Comparing files from stage " + stage);
+                            for (int i = 0; i < files.size() - 1; i++) {
+                                fileP = files.get(i);
+                                if (!fileP.getSeen()) {
+                                    df.createChoosingGroup(i);
+                                    AtomicBoolean found = new AtomicBoolean(false);
+                                    int portion;
+                                    int nFiles = files.size() - i - 1;
+                                    if (nFiles <= processors)
+                                        portion = 1;
+                                    else
+                                        portion = nFiles / processors;
+                                    List<Thread> threads = new ArrayList<>();
+
+                                    int finalI = i;
+                                    FileProperties finalFileP = fileP;
+                                    AtomicInteger counter = new AtomicInteger();
+
+                                    for (int k = 0; k < Math.min(processors, nFiles); k++) {
+                                        int finalK = k;
+                                        Thread thread = new Thread(() -> {
+                                            int begin = finalI + 1 + (finalK * portion), end;
+                                            if (finalK == Math.min(processors, nFiles) - 1)
+                                                end = files.size();
+                                            else
+                                                end = begin + portion;
+
+                                            for (FileProperties f : files.subList(begin, end)) {
+                                                counter.getAndIncrement();
+                                                if (df.compareFiles(finalFileP, f, percentage, finalI))
+                                                    found.set(true);
+                                            }
+                                        });
+                                        threads.add(thread);
+                                        thread.start();
+                                    }
+
+                                    for (Thread t : threads)
+                                        t.join();
+
+                                    assert nFiles == counter.get();
+
+                                    if (found.get())
+                                        df.addToChoosingGroup(i, fileP);
+                                    else
+                                        df.removeChoosingGroup(i);
+
+                                    System.gc();
+                                }
+                                synchronized (this) {
+                                    double progress = (double) i / (files.size() - 1);
+                                    progressBar.setProgress(progress);
+                                    int p = (int) (progress * 100);
+                                    pbPercentage.setText(p + "%");
                                 }
                             }
-                        });
-                        threads.add(thread);
-                        thread.start();
-                    }
-
-                    for (Thread t : threads)
-                        t.join();
-                    assert counter.get() == files.size();
-                    progressBox.setVisible(false);
-                } else
-                    //log.append(VIDEOS + "\n");
-
-                    progressBox.setVisible(true);
-                //log.append("Comparing files from stage " + stage + "...\n");
-                System.out.println("Comparing files from stage " + stage + "...\n");
-                progressBarText.setText("Comparing files... (2/2)");
-                for (int i = 0; i < files.size() - 1; i++) {
-                    fileP = files.get(i);
-                    if (!fileP.getSeen()) {
-                        df.createChoosingGroup(i);
-                        AtomicBoolean found = new AtomicBoolean(false);
-                        int portion;
-                        int nFiles = files.size() - i - 1;
-                        if (nFiles <= processors)
-                            portion = 1;
-                        else
-                            portion = nFiles / processors;
-                        List<Thread> threads = new ArrayList<>();
-
-                        int finalI = i;
-                        FileProperties finalFileP = fileP;
-                        AtomicInteger counter = new AtomicInteger();
-
-                        for (int k = 0; k < Math.min(processors, nFiles); k++) {
-                            int finalK = k;
-                            Thread thread = new Thread(() -> {
-                                int begin = finalI + 1 + (finalK * portion), end;
-                                if (finalK == Math.min(processors, nFiles) - 1)
-                                    end = files.size();
-                                else
-                                    end = begin + portion;
-
-                                for (FileProperties f : files.subList(begin, end)) {
-                                    counter.getAndIncrement();
-                                    if (df.compareFiles(finalFileP, f, percentage, finalI))
-                                        found.set(true);
-                                }
-                            });
-                            threads.add(thread);
-                            thread.start();
                         }
-
-                        for (Thread t : threads)
-                            t.join();
-
-                        assert nFiles == counter.get();
-
-                        if (found.get())
-                            df.addToChoosingGroup(i, fileP);
-                        else
-                            df.removeChoosingGroup(i);
-
-                        System.gc();
                     }
-                    progressBar.setProgress(i / (files.size() - 1));
+                    groups = df.getToDelete();
+                    progressBox.setVisible(false);
+                    //log.setText("");
+                    if (!groups.hasNext()) {
+                        //logPanel.setVisible(false);
+                        JOptionPane.showMessageDialog(null, "There aren't duplicated files!");
+                        //textDir.setEnabled(true);
+                        //searchButton.setEnabled(true);
+                    } else {
+                        //log.append("Files to be \"deleted\":\n");
+                        System.out.println("Files to be \"deleted\":\n");
+                        paneChooseToDelete.setVisible(true);
+                        scrollViewImages.setVisible(true);
+                        nextGroup.setVisible(true);
+                        stopHere.setVisible(true);
+                        index = 1;
+                        Platform.runLater(() -> chooseToDelete());
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
-        }
-        groups = df.getToDelete();
-        progressBox.setVisible(false);
-        //log.setText("");
-        if (!groups.hasNext()) {
-            //logPanel.setVisible(false);
-            JOptionPane.showMessageDialog(null, "There aren't duplicated files!");
-            //textDir.setEnabled(true);
-            //searchButton.setEnabled(true);
-        } else {
-            //log.append("Files to be \"deleted\":\n");
-            System.out.println("Files to be \"deleted\":\n");
-            paneChooseToDelete.setVisible(true);
-            scrollViewImages.setVisible(true);
-            nextGroup.setVisible(true);
-            stopHere.setVisible(true);
-            index = 1;
-            chooseToDelete();
-
-        }
+        }.start();
     }
+
 
     public void setStage(Stage stageC) {
         stage = stageC;
     }
 
-    private Map<CheckBox,FileProperties> filesCurrentGroup = new HashMap<>();
+    private Map<CheckBox, FileProperties> filesCurrentGroup = new HashMap<>();
+
     private void chooseToDelete() {
-        if (!filesCurrentGroup.isEmpty()){
-            for(Map.Entry<CheckBox,FileProperties> entry : filesCurrentGroup.entrySet()){
-                if(entry.getKey().isSelected())
+        if (!filesCurrentGroup.isEmpty()) {
+            for (Map.Entry<CheckBox, FileProperties> entry : filesCurrentGroup.entrySet()) {
+                if (entry.getKey().isSelected())
                     entry.getValue().setToDelete(true);
             }
             filesCurrentGroup.clear();
@@ -621,7 +619,10 @@ public class SortingMemoriesController {
             vBox.setSpacing(30);
             for (FileProperties fp : list) {
                 VBox inside = new VBox();
-                String text = fp.getFile().getAbsolutePath();
+                long bytes = fp.getFile().length();
+                long kilobytes = (bytes / 1024);
+                long megabytes = (kilobytes / 1024);
+                String text = fp.getFile().getAbsolutePath() + "\n" + kilobytes + "KB/" + megabytes + "MB";
 
                 File f = fp.getFile();
                 Image image = new Image(f.toURI().toString());
@@ -630,7 +631,7 @@ public class SortingMemoriesController {
                 imageView.setFitHeight(250);
                 inside.getChildren().add((imageView));
                 CheckBox cb = new CheckBox(text);
-                filesCurrentGroup.put(cb,fp);
+                filesCurrentGroup.put(cb, fp);
                 inside.getChildren().add(cb);
                 inside.setSpacing(10);
                 vBox.getChildren().add(inside);
@@ -646,15 +647,16 @@ public class SortingMemoriesController {
     void stopSelectionAction(ActionEvent event) {
         stopSelection();
     }
-    private void stopSelection(){
+
+    private void stopSelection() {
         df.deleteFiles();
         Object[] options = {"Back to Stages", "Main Menu", "Exit"};
-        int option = JOptionPane.showOptionDialog(null, "Selected files were \"deleted\"!",null, JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE,null, options, options[0]);
-        if(option == 0){
+        int option = JOptionPane.showOptionDialog(null, "Selected files were \"deleted\"!", null, JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+        if (option == 0) {
             System.out.println(0);
-        } else if(option == 1){
+        } else if (option == 1) {
             System.out.println(1);
-        }else{
+        } else {
             System.exit(0);
         }
     }

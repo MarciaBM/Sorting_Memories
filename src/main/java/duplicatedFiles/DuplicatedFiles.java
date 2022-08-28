@@ -59,14 +59,12 @@ public class DuplicatedFiles {
     private final Map<Integer, CopyOnWriteArrayList<FileProperties>> choosingGroups;
     private OSType osType;
     private boolean isImage;
-    private String app;
 
 
     public DuplicatedFiles(File root) {
         this.root = root;
         defineOS();
         loadLib();
-        app = null;
         ihb = PHash.create();
         videos = new HashMap<>();
         images = new HashMap<>();
@@ -119,10 +117,6 @@ public class DuplicatedFiles {
 
     public int getChoosingGroupsSize() {
         return choosingGroups.size();
-    }
-
-    public OSType getOSType() {
-        return osType;
     }
 
     public boolean getIsImage() {
@@ -186,14 +180,6 @@ public class DuplicatedFiles {
         }
     }
 
-    public String getApp() {
-        return app;
-    }
-
-    public void setApp(String app) {
-        this.app = app;
-    }
-
     public long fileCount(Path dir) {
         try {
             return Files.walk(dir)
@@ -206,6 +192,7 @@ public class DuplicatedFiles {
         return -1;
     }
 
+    //inserting file metadata into the system
     public int deleteDuplicatedFiles(File file) {
         int sumVideos = 0;
         if (!file.getAbsolutePath().contains(root.getAbsolutePath() + File.separator + "to delete")) {
@@ -278,9 +265,7 @@ public class DuplicatedFiles {
                 byte[] bytes = Files.readAllBytes(fp.getFile().toPath());
                 mat = Imgcodecs.imdecode(new MatOfByte(bytes), Imgcodecs.IMREAD_UNCHANGED);
             }
-            synchronized (this) {
-                ip.setHash(getHash(mat, ip.getHash()));
-            }
+            ip.setHash(getHash(mat, ip.getHash()));
             mat.release();
         }
     }
@@ -317,14 +302,6 @@ public class DuplicatedFiles {
         return found;
     }
 
-    public String permissionApp() throws IOException {
-        ProcessBuilder processBuilder = new ProcessBuilder();
-        String path = getPathJarCompatibility(GET_APPS_SCRIPT);
-        processBuilder.command("chmod", "+x", path);
-        processBuilder.start();
-        return path;
-    }
-
     private String getPathJarCompatibility(String name) throws IOException {
         InputStream in = getClass().getClassLoader().getResourceAsStream(name);
         File tmpDir = Files.createTempDirectory("my-native-lib").toFile();
@@ -347,28 +324,6 @@ public class DuplicatedFiles {
         return result;
     }
 
-    public Iterator<String> apps(String scriptLoc) throws IOException {
-        ProcessBuilder processBuilder = new ProcessBuilder();
-        processBuilder.command(scriptLoc);
-        return runProcess(processBuilder).iterator();
-    }
-
-    public void showPicture(FileProperties fp) {
-        try {
-            if (isImage) {
-                if (getApp() == null) {
-                    String expr = IMAGE_WIN + fp.getFile().getAbsolutePath();
-                    Runtime.getRuntime().exec(expr);
-                } else {
-                    ProcessBuilder processBuilder = new ProcessBuilder();
-                    processBuilder.command(app, fp.getFile().getAbsolutePath());
-                    processBuilder.start();
-                }
-            }
-        } catch (IOException ignored) {
-        }
-    }
-
     public void deleteFiles() {
         Iterator<List<FileProperties>> it;
         if (isImage)
@@ -388,33 +343,4 @@ public class DuplicatedFiles {
             }
         }
     }
-
-    public void closePreviews(int master) throws IOException, InterruptedException {
-        CopyOnWriteArrayList<FileProperties> list = choosingGroups.get(master);
-        if (osType == OSType.MACOS)
-            Runtime.getRuntime().exec(KILL_MACOS);
-        else if (osType == OSType.LINUX)
-            Runtime.getRuntime().exec(KILL_LINUX + app);
-        else {
-            for (FileProperties fp : list)
-                Runtime.getRuntime().exec(KILL_WIN + fp.getFile().getName() + "*\" /t");
-        }
-        Thread.sleep(500);
-    }
-
-    public String analyzeAnswer(String answer, int master) {
-        StringBuilder res = new StringBuilder();
-        CopyOnWriteArrayList<FileProperties> list = choosingGroups.get(master);
-        if (!answer.equals("")) {
-            String[] numbers = answer.split(" ");
-            for (String s : numbers) {
-                int index = Integer.parseInt(s) - 1;
-                FileProperties fp = list.get(index);
-                fp.setToDelete(true);
-                res.append(fp.getFile().getAbsolutePath()).append("\n");
-            }
-        }
-        return res.toString();
-    }
-
 }

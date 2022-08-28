@@ -258,6 +258,7 @@
             <HBox prefHeight="46.0" prefWidth="502.0" spacing="15.0">
                <children>
                   <ProgressBar fx:id="progressBar" prefHeight="25.0" prefWidth="501.0" progress="0.0" />
+                  <Text fx:id="pbPercentage" strokeType="OUTSIDE" strokeWidth="0.0" text="Text" wrappingWidth="46.80346488952637" />
                </children>
             </HBox>
             <ImageView fx:id="loadingGif" fitHeight="61.0" fitWidth="76.0" opacity="0.7" pickOnBounds="true" preserveRatio="true">
