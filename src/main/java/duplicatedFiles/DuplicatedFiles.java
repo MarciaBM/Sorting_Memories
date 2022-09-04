@@ -14,7 +14,6 @@ import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.ImageInputStream;
 import java.awt.*;
 import java.io.*;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -61,7 +60,7 @@ public class DuplicatedFiles {
     private boolean isImage;
 
 
-    public DuplicatedFiles(File root) {
+    public DuplicatedFiles(File root) throws IOException {
         this.root = root;
         defineOS();
         loadLib();
@@ -165,35 +164,26 @@ public class DuplicatedFiles {
         }
     }
 
-    private void loadLib() {
-        try {
-            String lib;
-            if (osType == OSType.WINDOWS)
-                lib = LIB_WIN;
-            else if (osType == OSType.MACOS)
-                lib = LIB_MACOS;
-            else
-                lib = LIB_LINUX;
-            System.load(getPathJarCompatibility(lib));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    private void loadLib() throws IOException {
+        String lib;
+        if (osType == OSType.WINDOWS)
+            lib = LIB_WIN;
+        else if (osType == OSType.MACOS)
+            lib = LIB_MACOS;
+        else
+            lib = LIB_LINUX;
+        System.load(getPathJarCompatibility(lib));
     }
 
-    public long fileCount(Path dir) {
-        try {
-            return Files.walk(dir)
-                    .parallel()
-                    .filter(p -> !p.toFile().isDirectory())
-                    .count();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return -1;
+    public long fileCount(Path dir) throws IOException {
+        return Files.walk(dir)
+                .parallel()
+                .filter(p -> !p.toFile().isDirectory())
+                .count();
     }
 
     //inserting file metadata into the system
-    public int deleteDuplicatedFiles(File file) {
+    public int deleteDuplicatedFiles(File file) throws IOException {
         int sumVideos = 0;
         if (!file.getAbsolutePath().contains(root.getAbsolutePath() + File.separator + "to delete")) {
             if (getMimeType(file).equals(IMAGE)) {
@@ -225,24 +215,17 @@ public class DuplicatedFiles {
         return sumVideos;
     }
 
-    public Dimension getImageDimension(File imgFile) {
-        int pos = imgFile.getName().lastIndexOf(".");
-        try {
-            if (pos == -1)
-                return null;
-            String suffix = imgFile.getName().substring(pos + 1);
-            Iterator<ImageReader> iter = ImageIO.getImageReadersBySuffix(suffix);
-            if (iter.hasNext()) {
-                ImageReader reader = iter.next();
-                ImageInputStream stream = new FileImageInputStream(imgFile);
-                reader.setInput(stream);
-                int width = reader.getWidth(reader.getMinIndex());
-                int height = reader.getHeight(reader.getMinIndex());
-                reader.dispose();
-                return new Dimension(width, height);
-            }
-        } catch (IOException e) {
-            return null;
+    public Dimension getImageDimension(File imgFile) throws IOException {
+        ImageInputStream iis = ImageIO.createImageInputStream(imgFile);
+        Iterator<ImageReader> iterator = ImageIO.getImageReaders(iis);
+
+        if (iterator.hasNext()) {
+            ImageReader reader = iterator.next();
+            reader.setInput(iis, false);
+            int width = reader.getWidth(0);
+            int height = reader.getHeight(0);
+            reader.dispose();
+            return new Dimension(width, height);
         }
         return null;
     }
@@ -331,7 +314,7 @@ public class DuplicatedFiles {
         else
             it = videos.values().iterator();
         String toDeletePath = root + File.separator + TO_DELETE;
-        if(it.hasNext()){
+        if (it.hasNext()) {
             new File(toDeletePath).mkdirs();
         }
         while (it.hasNext()) {

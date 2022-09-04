@@ -50,116 +50,118 @@ public class SortingMemoriesController {
     private int index;
     private Stage stage;
 
-    @FXML
-    private Pane mainPane;
+    private Map<CheckBox, FileProperties> filesCurrentGroup = new HashMap<>();
 
     @FXML
-    private GridPane mainMenu;
+    Pane mainPane;
 
     @FXML
-    private Button ofby;
+    GridPane mainMenu;
 
     @FXML
-    private Button ofbm;
+    Button ofby;
 
     @FXML
-    private Button ofbd;
+    Button ofbm;
 
     @FXML
-    private Button continueButton;
+    Button ofbd;
 
     @FXML
-    private Button def;
+    Button continueButton;
 
     @FXML
-    private ImageView ddf;
+    Button def;
 
     @FXML
-    private ImageView donate;
+    ImageView ddf;
 
     @FXML
-    private ImageView logo;
+    ImageView donate;
 
     @FXML
-    private HBox searchBox;
+    ImageView logo;
 
     @FXML
-    private VBox progressBox;
+    HBox searchBox;
 
     @FXML
-    private TextField rootDirectory;
+    VBox progressBox;
 
     @FXML
-    private Button searchButton;
+    TextField rootDirectory;
 
     @FXML
-    private Pane stagesPane;
+    Button searchButton;
 
     @FXML
-    private TextField percentageText;
+    Pane stagesPane;
 
     @FXML
-    private GridPane stages;
+    TextField percentageText;
 
     @FXML
-    private CheckBox checkBox1;
+    GridPane stages;
 
     @FXML
-    private CheckBox checkBox6;
+    CheckBox checkBox1;
 
     @FXML
-    private CheckBox checkBox2;
+    CheckBox checkBox6;
 
     @FXML
-    private CheckBox checkBox3;
+    CheckBox checkBox2;
 
     @FXML
-    private CheckBox checkBox4;
+    CheckBox checkBox3;
 
     @FXML
-    private CheckBox checkBox5;
+    CheckBox checkBox4;
 
     @FXML
-    private CheckBox checkBox7;
+    CheckBox checkBox5;
 
     @FXML
-    private CheckBox checkBox8;
+    CheckBox checkBox7;
 
     @FXML
-    private CheckBox checkBox9;
+    CheckBox checkBox8;
 
     @FXML
-    private CheckBox checkBox10;
+    CheckBox checkBox9;
 
     @FXML
-    private Button nextGroup;
+    CheckBox checkBox10;
 
     @FXML
-    private Button stopHere;
+    Button nextGroup;
 
     @FXML
-    private Text progressBarText;
+    Button stopHere;
 
     @FXML
-    private Text pbPercentage;
-    @FXML
-    private ProgressBar progressBar;
+    Text progressBarText;
 
     @FXML
-    private ImageView loadingGif;
+    Text pbPercentage;
+    @FXML
+    ProgressBar progressBar;
 
     @FXML
-    private ScrollPane scrollViewImages;
+    ImageView loadingGif;
 
     @FXML
-    private Pane paneChooseToDelete;
+    ScrollPane scrollViewImages;
 
     @FXML
-    private TextField groupsCount;
+    Pane paneChooseToDelete;
+
+    @FXML
+    TextField groupsCount;
 
 
     @FXML
-    private VBox vboxToChoose;
+    VBox vboxToChoose;
 
     public File getFolder() {
         return folder;
@@ -216,18 +218,14 @@ public class SortingMemoriesController {
 
     /*Delete empty folders*/
     @FXML
-    void defAction(ActionEvent event) {
-        try {
+    void defAction(ActionEvent event) throws ScriptException {
             checkDirectory();
             alertDialog(Alert.AlertType.INFORMATION, Tools.deleteEmptyFolders(folder, 0) + CONFIRMATION_EMPTY_FOLDERS);
-        } catch (ScriptException scriptException) {
-            scriptException.printStackTrace();
-        }
     }
 
     /*Delete Duplicated files*/
     @FXML
-    void ddfAction(ActionEvent event) {
+    void ddfAction(ActionEvent event) throws IOException {
 
         // checkDirectory();
         /*    textDir.setEnabled(false);
@@ -268,7 +266,8 @@ public class SortingMemoriesController {
                         Platform.runLater(() -> printStages(finalSumVideos));
                         stagesPane.setVisible(true);
                         progressBox.setVisible(false);
-                    } catch (InterruptedException e) {
+                    } catch (InterruptedException | IOException e) {
+                        handleException(e.getMessage());
                         e.printStackTrace();
                     }
                 }
@@ -278,8 +277,7 @@ public class SortingMemoriesController {
 
     //after choosing stages
     @FXML
-    void continueButtonAction(ActionEvent event) {
-        try {
+    void continueButtonAction(ActionEvent event) throws ScriptException {
             boolean exists = false;
             boolean all = true;
             for (int i = 0; i < checkBoxes.size() - 1; i++) {
@@ -292,7 +290,8 @@ public class SortingMemoriesController {
             if (checkBox10.isSelected()) {
                 if (exists) {
                     alertDialog(Alert.AlertType.WARNING, WRONG_SELECTION);
-                    throw new ScriptException("");
+                    stagesPane.setVisible(true);
+                    return;
                 }
                 df.setIsImage(false);
 
@@ -316,12 +315,6 @@ public class SortingMemoriesController {
                     iteratingMaps(-1);
                 });
             }
-
-
-        } catch (ScriptException scriptException) {
-            stagesPane.setVisible(true);
-            scriptException.printStackTrace();
-        }
     }
 
     @FXML
@@ -370,7 +363,7 @@ public class SortingMemoriesController {
     }
 
     //when loading files metadata... first step
-    private int deleteDuplicatedFiles() throws InterruptedException {
+    private int deleteDuplicatedFiles() throws InterruptedException, IOException {
         AtomicInteger sumVideos = new AtomicInteger();
         int total = (int) df.fileCount(folder.toPath());
         AtomicInteger counter = new AtomicInteger();
@@ -390,25 +383,30 @@ public class SortingMemoriesController {
         for (int i = 0; i < Math.min(files.size(), processors); i++) {
             int finalI = i;
             Thread thread = new Thread(() -> {
-                int begin = finalI * portion, end;
-                if (finalI == Math.min(files.size(), processors) - 1)
-                    end = files.size();
-                else
-                    end = begin + portion;
-                for (File f : files.subList(begin, end)) {
-                    aux.getAndIncrement();
-                    Iterator<File> it = Tools.getFile(f, new ArrayList<>());
-                    while (it.hasNext()) {
-                        File file = it.next();
-                        counter.getAndIncrement();
-                        synchronized (this) {
-                            double progress = (double) counter.get() / total;
-                            progressBar.setProgress(progress);
-                            int p = (int) (progress * 100);
-                            pbPercentage.setText(p + "%");
+                try {
+                    int begin = finalI * portion, end;
+                    if (finalI == Math.min(files.size(), processors) - 1)
+                        end = files.size();
+                    else
+                        end = begin + portion;
+                    for (File f : files.subList(begin, end)) {
+                        aux.getAndIncrement();
+                        Iterator<File> it = Tools.getFile(f, new ArrayList<>());
+                        while (it.hasNext()) {
+                            File file = it.next();
+                            counter.getAndIncrement();
+                            synchronized (this) {
+                                double progress = (double) counter.get() / total;
+                                progressBar.setProgress(progress);
+                                int p = (int) (progress * 100);
+                                pbPercentage.setText(p + "%");
+                            }
+                            sumVideos.addAndGet(df.deleteDuplicatedFiles(file));
                         }
-                        sumVideos.addAndGet(df.deleteDuplicatedFiles(file));
                     }
+                }catch (IOException e){
+                    handleException(e.getMessage());
+                    e.printStackTrace();
                 }
             });
             threads.add(thread);
@@ -448,6 +446,7 @@ public class SortingMemoriesController {
     }
 
 
+    //loading stages...
     private void iteratingMaps(int percentage) {
         new Thread() {
             public void run() {
@@ -498,6 +497,7 @@ public class SortingMemoriesController {
                                             try {
                                                 df.definingHash(fp);
                                             } catch (IOException e) {
+                                                handleException(e.getMessage());
                                                 e.printStackTrace();
                                             }
                                         }
@@ -588,6 +588,7 @@ public class SortingMemoriesController {
                         Platform.runLater(() -> chooseToDelete());
                     }
                 } catch (InterruptedException e) {
+                    handleException(e.getMessage());
                     e.printStackTrace();
                 }
             }
@@ -598,8 +599,6 @@ public class SortingMemoriesController {
     public void setStage(Stage stageC) {
         stage = stageC;
     }
-
-    private Map<CheckBox, FileProperties> filesCurrentGroup = new HashMap<>();
 
     private void chooseToDelete() {
         if (!filesCurrentGroup.isEmpty()) {
@@ -659,5 +658,9 @@ public class SortingMemoriesController {
         } else {
             System.exit(0);
         }
+    }
+
+    private void handleException (String message){
+
     }
 }
