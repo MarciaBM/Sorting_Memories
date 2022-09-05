@@ -157,7 +157,7 @@ public class SortingMemoriesController {
     Pane paneChooseToDelete;
 
     @FXML
-    TextField groupsCount;
+    Text groupsCount;
 
 
     @FXML
@@ -239,40 +239,44 @@ public class SortingMemoriesController {
 
         Optional<ButtonType> res = alertDialog(Alert.AlertType.CONFIRMATION, WARNING_STAGES);
         if (res.get() == ButtonType.OK) {
-            mainMenu.setVisible(false);
-            progressBox.setVisible(true);
-            progressBarText.setText(LOADING_FILES);
-            searchButton.setDisable(true);
-            rootDirectory.setDisable(true);
-            checkBoxes.add(checkBox1);
-            checkBoxes.add(checkBox2);
-            checkBoxes.add(checkBox3);
-            checkBoxes.add(checkBox4);
-            checkBoxes.add(checkBox5);
-            checkBoxes.add(checkBox6);
-            checkBoxes.add(checkBox7);
-            checkBoxes.add(checkBox8);
-            checkBoxes.add(checkBox9);
-            checkBoxes.add(checkBox10);
-            df = new DuplicatedFiles(folder);
-            new Thread() {
-                public void run() {
-                    try {
-                        int sumVideos = 0;
-                        //load all files metadata
-                        sumVideos = deleteDuplicatedFiles();
-                        int finalSumVideos = sumVideos;
-                        //choosing stages
-                        Platform.runLater(() -> printStages(finalSumVideos));
-                        stagesPane.setVisible(true);
-                        progressBox.setVisible(false);
-                    } catch (InterruptedException | IOException e) {
-                        handleException(e.getMessage());
-                        e.printStackTrace();
-                    }
-                }
-            }.start();
+           showStages();
         }
+    }
+
+    private void showStages() throws IOException {
+        mainMenu.setVisible(false);
+        progressBox.setVisible(true);
+        progressBarText.setText(LOADING_FILES);
+        searchButton.setDisable(true);
+        rootDirectory.setDisable(true);
+        checkBoxes.add(checkBox1);
+        checkBoxes.add(checkBox2);
+        checkBoxes.add(checkBox3);
+        checkBoxes.add(checkBox4);
+        checkBoxes.add(checkBox5);
+        checkBoxes.add(checkBox6);
+        checkBoxes.add(checkBox7);
+        checkBoxes.add(checkBox8);
+        checkBoxes.add(checkBox9);
+        checkBoxes.add(checkBox10);
+        df = new DuplicatedFiles(folder);
+        new Thread() {
+            public void run() {
+                try {
+                    int sumVideos = 0;
+                    //load all files metadata
+                    sumVideos = deleteDuplicatedFiles();
+                    int finalSumVideos = sumVideos;
+                    //choosing stages
+                    Platform.runLater(() -> printStages(finalSumVideos));
+                    stagesPane.setVisible(true);
+                    progressBox.setVisible(false);
+                } catch (InterruptedException | IOException e) {
+                    handleException(e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }.start();
     }
 
     //after choosing stages
@@ -318,7 +322,7 @@ public class SortingMemoriesController {
     }
 
     @FXML
-    void nextButtonAction(ActionEvent event) {
+    void nextButtonAction(ActionEvent event) throws IOException {
         chooseToDelete();
     }
 
@@ -585,7 +589,14 @@ public class SortingMemoriesController {
                         nextGroup.setVisible(true);
                         stopHere.setVisible(true);
                         index = 1;
-                        Platform.runLater(() -> chooseToDelete());
+                        Platform.runLater(() -> {
+                            try {
+                                chooseToDelete();
+                            } catch (IOException e) {
+                                handleException(e.getMessage());
+                                e.printStackTrace();
+                            }
+                        });
                     }
                 } catch (InterruptedException e) {
                     handleException(e.getMessage());
@@ -600,7 +611,7 @@ public class SortingMemoriesController {
         stage = stageC;
     }
 
-    private void chooseToDelete() {
+    private void chooseToDelete() throws IOException {
         if (!filesCurrentGroup.isEmpty()) {
             for (Map.Entry<CheckBox, FileProperties> entry : filesCurrentGroup.entrySet()) {
                 if (entry.getKey().isSelected())
@@ -611,6 +622,7 @@ public class SortingMemoriesController {
         if (groups.hasNext()) {
             Map.Entry<Integer, CopyOnWriteArrayList<FileProperties>> entry = groups.next();
             CopyOnWriteArrayList<FileProperties> list = entry.getValue();
+            groupsCount.setVisible(true);
             groupsCount.setText("Group " + index + " of " + df.getChoosingGroupsSize());
             index++;
 
@@ -643,16 +655,17 @@ public class SortingMemoriesController {
     }
 
     @FXML
-    void stopSelectionAction(ActionEvent event) {
+    void stopSelectionAction(ActionEvent event) throws IOException {
         stopSelection();
     }
 
-    private void stopSelection() {
+    private void stopSelection() throws IOException {
         df.deleteFiles();
         Object[] options = {"Back to Stages", "Main Menu", "Exit"};
         int option = JOptionPane.showOptionDialog(null, "Selected files were \"deleted\"!", null, JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
         if (option == 0) {
-            System.out.println(0);
+            paneChooseToDelete.setVisible(false);
+            showStages();
         } else if (option == 1) {
             System.out.println(1);
         } else {

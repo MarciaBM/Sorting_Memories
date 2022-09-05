@@ -272,8 +272,8 @@
          <children>
             <ScrollPane fx:id="scrollViewImages" layoutX="64.0" layoutY="48.0" prefHeight="393.0" prefWidth="538.0" vbarPolicy="ALWAYS" visible="false" />
             <Button fx:id="nextGroup" layoutX="294.0" layoutY="443.0" mnemonicParsing="false" onAction="#nextButtonAction" prefHeight="35.0" prefWidth="94.0" text="Next" visible="false" />
-            <TextField fx:id="groupsCount" alignment="CENTER" editable="false" layoutX="71.0" layoutY="11.0" prefHeight="35.0" prefWidth="522.0" />
             <Button fx:id="stopHere" layoutX="589.0" layoutY="452.0" mnemonicParsing="false" onAction="#stopSelectionAction" prefHeight="28.0" prefWidth="85.0" text="Stop Here" />
+            <Text fx:id="groupsCount" layoutX="60.0" layoutY="25.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Text" visible="false" wrappingWidth="546.999938964844" />
          </children>
       </Pane>
    </children>
