@@ -1,6 +1,7 @@
 package duplicatedFiles;
 
 import file.*;
+import javafx.scene.image.ImageView;
 import org.opencv.core.CvException;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
@@ -13,6 +14,7 @@ import javax.imageio.ImageReader;
 import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.ImageInputStream;
 import java.awt.*;
+import java.awt.image.*;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,6 +22,8 @@ import java.util.List;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+
+import static file.Tools.getBufferedImage;
 
 public class DuplicatedFiles {
     private static final float PROPORTION_MARGIN = 0.02f;
@@ -239,17 +243,29 @@ public class DuplicatedFiles {
         }
     }
 
-    public void definingHash(FileProperties fp) throws IOException {
+    public void definingHash(FileProperties fp) throws IOException, InterruptedException {
         if (fp instanceof ImageProperties) {
             ImageProperties ip = (ImageProperties) fp;
             Mat mat;
             mat = Imgcodecs.imread(fp.getFile().getAbsolutePath());
             if (mat.empty()) {
-                byte[] bytes = Files.readAllBytes(fp.getFile().toPath());
+                String[] array = fp.getFile().getAbsolutePath().split("\\.");
+                String format = array[array.length - 1];
+                byte[] bytes;
+                if (format.equals("jpeg")) {
+                    BufferedImage image = getBufferedImage(fp.getFile().getAbsolutePath());
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    ImageIO.write(image, format, baos);
+                    bytes = baos.toByteArray();
+                } else
+                    bytes = Files.readAllBytes(fp.getFile().toPath());
                 mat = Imgcodecs.imdecode(new MatOfByte(bytes), Imgcodecs.IMREAD_UNCHANGED);
             }
             ip.setHash(getHash(mat, ip.getHash()));
-            mat.release();
+//            try{
+            while(!mat.empty())
+                mat.release();
+//            }catch (Exception ignored){}
         }
     }
 
@@ -264,7 +280,7 @@ public class DuplicatedFiles {
             if (isImage && fileP instanceof ImageProperties && secondFileP instanceof ImageProperties) {
                 ImageProperties ip1 = (ImageProperties) fileP;
                 ImageProperties ip2 = (ImageProperties) secondFileP;
-                if (Math.abs(ip1.getProportion() - ip2.getProportion()) <= 0.02f && !cantCompare) {
+                if (Math.abs(ip1.getProportion() - ip2.getProportion()) <= 0.01f && !cantCompare) {
                     if (ip2.getHash() != null && ip1.getHash() != null) {
                         if (100.0 - (ihb.compare(ip1.getHash(), ip2.getHash()) * 100.0 / 64.0) >= percentage) {
                             found = true;

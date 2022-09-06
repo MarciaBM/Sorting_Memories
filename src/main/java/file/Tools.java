@@ -5,6 +5,8 @@ import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
 
+import java.awt.*;
+import java.awt.image.*;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
@@ -55,5 +57,21 @@ public class Tools {
             }
         }
         return counter;
+    }
+
+    //taken from https://stackoverflow.com/questions/48653584/cannot-load-jpeg-with-java-created-by-samsung-phone
+    public static BufferedImage getBufferedImage(String filename) throws InterruptedException {
+        final java.awt.Image image = Toolkit.getDefaultToolkit().createImage(filename);
+
+        final int[] RGB_MASKS = {0xFF0000, 0xFF00, 0xFF};
+        final ColorModel RGB_OPAQUE =
+                new DirectColorModel(32, RGB_MASKS[0], RGB_MASKS[1], RGB_MASKS[2]);
+
+        PixelGrabber pg = new PixelGrabber(image, 0, 0, -1, -1, true);
+        pg.grabPixels();
+        int width = pg.getWidth(), height = pg.getHeight();
+        DataBuffer buffer = new DataBufferInt((int[]) pg.getPixels(), pg.getWidth() * pg.getHeight());
+        WritableRaster raster = Raster.createPackedRaster(buffer, width, height, width, RGB_MASKS, null);
+        return new BufferedImage(RGB_OPAQUE, raster, false, null);
     }
 }
